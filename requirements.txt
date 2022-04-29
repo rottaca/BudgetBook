@@ -1,0 +1,6 @@
+plotly
+dash
+pytest
+python-dateutil
+black
+pandas
