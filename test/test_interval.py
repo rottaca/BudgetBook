@@ -1,13 +1,17 @@
 from datetime import date
 from pprint import pprint
+import random
 import sys, os.path
 import pandas as pd
+import plotly 
+import plotly.express as px
 pd.options.plotting.backend = "plotly"
 
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.append(SRC_DIR)
 
 from BudgetBook.interval import (
+    Category,
     DatedMoneyTransfer,
     MoneyTransferManager,
     ReocurringEvent,
@@ -39,6 +43,7 @@ def test_interval_iteration():
 def test_reocurring_transfer():
     reocurring_payment = ReocurringMoneyTransfer(
         "MyPayment",
+        Category.UNKNOWN,
         100.0,
         ReocurringEvent(
             first_occurence=year(2022), interval_size=MoneyTransferInterval.monthly()
@@ -49,13 +54,11 @@ def test_reocurring_transfer():
         p for p in reocurring_payment.iterate(from_date=year(2022), up_to=date(year=2023, month=5, day=1))
     ]
     expected_intervals = [
-        DatedMoneyTransfer(date(year=2022, month=i, day=1), 100.0) for i in range(1, 13)
+        DatedMoneyTransfer("test", date(year=2022, month=i, day=1), 100.0) for i in range(1, 13)
     ]
     expected_intervals.extend(
-        [DatedMoneyTransfer(date(year=2023, month=i, day=1), 100.0) for i in range(1, 5)]
+        [DatedMoneyTransfer("test", date(year=2023, month=i, day=1), 100.0) for i in range(1, 5)]
     )
-
-    #pprint(generated_payments)
 
     assert all(
         (expected.get_date() == actual.get_date())
@@ -69,9 +72,10 @@ def test_reocurring_payment_builder():
     builder.set_first_ocurrence(2022)
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
-
+    builder.set_category(Category.OTHER_PAYMENT)
     builder.schedule_money_transfer("MyPayment1", -100.0)
     builder.set_interval(months=2)
+    builder.set_category(Category.SALERY)
     builder.schedule_money_transfer("MySalery", 1000.0)
 
     scheduled_transfers = builder.get_scheduled_transfers()
@@ -87,9 +91,10 @@ def test_money_transfer_manager():
     builder.set_first_ocurrence(2022)
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
-
+    builder.set_category(Category.OTHER_PAYMENT)
     builder.schedule_money_transfer("MyPayment1", -100.0)
     builder.set_interval(months=2)
+    builder.set_category(Category.SALERY)
     builder.schedule_money_transfer("MySalery", 1000.0)
 
     scheduled_transfers = builder.get_scheduled_transfers()
@@ -100,12 +105,31 @@ def test_money_transfer_manager():
     df = manager.to_dataframe(from_date=year(2022), to_date=year(2023))
     print(df)
     
-    df_transfers_per_month = df.reset_index().set_index(["date", "name"]).unstack().droplevel(level=0, axis=1)
-    df_balence_per_month = df.reset_index().groupby("date").sum()
+    df_transfers_per_month = df.set_index(["date", "name"]).unstack().droplevel(level=0, axis=1)
+    df_balence_per_month = df.groupby("date").sum()
 
+def test_random_data_plots():
     
-    df_transfers_per_month.plot.bar().show()
+    builder = ReocurringMoneyTransferBuilder()
+    builder.set_first_ocurrence(2022)
+    builder.set_last_ocurrence(2023)
+    for i in range(10):
+        amount = (random.random()-0.5)*1000.0
+        cat = Category.SALERY if amount > 0 else Category(random.randint(1, len(Category)-1))
+        builder.set_category(cat)
+        builder.set_interval(0,random.randint(1, 5), 0)
+        builder.schedule_money_transfer(f"dummy {i}", amount)
+        
+    scheduled_transfers = builder.get_scheduled_transfers()
 
+    manager = MoneyTransferManager()
+    manager.add_transfers(scheduled_transfers)
+    manager.set_analysis_interval(year(2022), year(2023))
 
+    df = manager._to_dataframe()
+    print(df)
 
-
+    manager.plot_transfers_per_month().show()
+    manager.plot_balance_per_month().show()
+    manager.plot_pie_chat_per_cateogry().show()
+    pass
