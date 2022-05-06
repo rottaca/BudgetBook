@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "c:\\Users\\Andreas Rottach\\Google Drive\\haushaltsrechner\\venv\\Scripts\\python.exe",
+    "python.path": "c:\\Users\\Andreas Rottach\\Google Drive\\haushaltsrechner\\venv\\Scripts\\python.exe",
     "python.analysis.extraPaths": [
         "c:\\Users\\Andreas Rottach\\Google Drive\\haushaltsrechner\\src"
     ],

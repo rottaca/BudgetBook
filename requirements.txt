@@ -1,5 +1,7 @@
 plotly
 dash
+dash-bootstrap-components
+dash-bootstrap-templates
 pytest
 python-dateutil
 black
