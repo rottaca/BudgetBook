@@ -1,0 +1,15 @@
+category_mapping:
+    SALERY:
+        desc: ["lohn", "gehalt"]
+    INSURANCE:
+        sender: ["versicherung", "assuranc"]
+    MOBILITY:
+        or:
+            desc: ["tank", "park", "garage", "autohaus", "autocenter"]
+            sender: ["tank"]
+    HOUSHOLD:
+        or:
+            desc: ["miet", "rewe", "finkbeiner", "takeaway", "lidl"]
+            sender: ["lidl", "rewe", "finkbeiner", "ecenter", "swu", "drogerie"]
+    TAX:
+        desc: [steuer"]

@@ -12,10 +12,10 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Current File",
+            "name": "Python: Dash App",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/BudgetBook/main.py",
+            "program": "${workspaceFolder}/app.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }

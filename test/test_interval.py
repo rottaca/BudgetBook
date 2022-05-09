@@ -11,10 +11,10 @@ pd.options.plotting.backend = "plotly"
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.append(SRC_DIR)
 
-from BudgetBook.interval import (
+from BudgetBook.money_transfer_visualizer import (
     Category,
     DatedMoneyTransfer,
-    MoneyTransferManager,
+    MoneyTransferVisualizer,
     ReocurringEvent,
     MoneyTransferInterval,
     ReocurringMoneyTransfer,
@@ -110,7 +110,7 @@ def test_money_transfer_manager():
 
     scheduled_transfers = builder.get_scheduled_transfers()
 
-    manager = MoneyTransferManager()
+    manager = MoneyTransferVisualizer()
     manager.add_transfers(scheduled_transfers)
 
     df = manager.to_dataframe(from_date=year(2022), to_date=year(2023))
@@ -135,7 +135,7 @@ def test_random_data_plots():
 
     scheduled_transfers = builder.get_scheduled_transfers()
 
-    manager = MoneyTransferManager()
+    manager = MoneyTransferVisualizer()
     manager.add_transfers(scheduled_transfers)
     manager.set_analysis_interval(year(2022), year(2023))
 
