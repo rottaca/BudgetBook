@@ -1,4 +1,6 @@
 category_mapping:
+    SAVINGS:
+        sender: ["andreas rottach"]
     SALERY:
         desc: ["lohn", "gehalt"]
     INSURANCE:
@@ -6,10 +8,18 @@ category_mapping:
     MOBILITY:
         or:
             desc: ["tank", "park", "garage", "autohaus", "autocenter"]
-            sender: ["tank"]
+            sender: ["tank", "bundeskasse in weiden", "vergoelst", "shell"]
     HOUSHOLD:
         or:
             desc: ["miet", "rewe", "finkbeiner", "takeaway", "lidl"]
-            sender: ["lidl", "rewe", "finkbeiner", "ecenter", "swu", "drogerie"]
-    TAX:
-        desc: [steuer"]
+            sender:
+                [
+                    "lidl",
+                    "rewe",
+                    "finkbeiner",
+                    "ecenter",
+                    "swu",
+                    "drogerie",
+                    "vodafone",
+                    "klarmobil",
+                ]

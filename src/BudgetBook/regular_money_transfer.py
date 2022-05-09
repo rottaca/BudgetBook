@@ -1,6 +1,6 @@
 import datetime
 from BudgetBook.dated_money_transfer import DatedMoneyTransfer
-from BudgetBook.helper import CURRENCY_SYMBOL, Category
+from BudgetBook.helper import CURRENCY_SYMBOL
 from BudgetBook.regular_event import RegularEvent
 
 
@@ -8,7 +8,7 @@ class RegularMoneyTransfer:
     def __init__(
         self,
         name: str,
-        category: Category,
+        category: str,
         money_transfer_amount: float,
         reocurrence: RegularEvent,
         desc: str = "",

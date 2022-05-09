@@ -1,3 +1,4 @@
+import copy
 import datetime
 from typing import List
 from BudgetBook.helper import Category
@@ -10,7 +11,7 @@ class RegularMoneyTransferBuilder:
     def __init__(self) -> None:
         self._current_recurrence = RegularEvent(None, None, None)
         self._scheduled_transfers = []
-        self._current_category = Category.UNKNOWN
+        self._current_category = None
 
     def get_scheduled_transfers(self) -> List[RegularMoneyTransfer]:
         return self._scheduled_transfers
@@ -39,7 +40,7 @@ class RegularMoneyTransferBuilder:
     def set_interval_yearly(self) -> None:
         self._current_recurrence.set_interval_size(MoneyTransferInterval.yearly())
 
-    def set_category(self, category: Category) -> None:
+    def set_category(self, category: str) -> None:
         self._current_category = category
 
     def schedule_money_transfer(self, name: str, amount: float):

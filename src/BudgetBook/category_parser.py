@@ -1,7 +1,5 @@
 import yaml
 
-from BudgetBook.helper import Category
-
 
 class CategoryParser:
     def __init__(self, yaml_file_path: str) -> None:
@@ -14,13 +12,13 @@ class CategoryParser:
 
         for category, mapping_rules in self._category_mapping.items():
             if self._check_category_match(name_sender, description, mapping_rules):
-                return Category[category]
+                return category
 
-        return Category.UNKNOWN_INCOME if amount > 0 else Category.UNKNOWN_PAYMENT
+        return "UNKNOWN_INCOME" if amount > 0 else "UNKNOWN_PAYMENT"
 
     @staticmethod
     def _field_contains_any(field, candiates):
-        return any(v in field for v in candiates)
+        return any(v.lower() in field for v in candiates)
 
     @staticmethod
     def _check_description(description, mapping_rules):

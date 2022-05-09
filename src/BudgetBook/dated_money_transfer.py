@@ -1,12 +1,14 @@
 import datetime
 
+from BudgetBook.helper import CURRENCY_SYMBOL
+
 
 class DatedMoneyTransfer:
     def __init__(
         self,
         name: str,
         desc: str,
-        category: "Category",
+        category: str,
         date: datetime.date,
         amount: float,
     ) -> None:
@@ -16,7 +18,7 @@ class DatedMoneyTransfer:
         self._date = date
         self._category = category
 
-    def get_category(self) -> "Category":
+    def get_category(self) -> str:
         return self._category
 
     def get_name(self) -> str:
