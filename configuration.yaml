@@ -1,3 +1,13 @@
+statement_parser:
+    csv_columns:
+        payment_party: "Name Zahlungsbeteiligter"
+        amount: "Betrag"
+        type_of_transfer: "Buchungstext"
+        description: "Verwendungszweck"
+        date: "Buchungstag"
+
+    date_format: "%d.%m.%Y"
+
 category_mapping:
     SAVINGS:
         sender: ["andreas rottach"]

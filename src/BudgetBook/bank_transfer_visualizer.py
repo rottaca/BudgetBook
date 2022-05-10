@@ -3,17 +3,18 @@ from typing import List
 
 import pandas as pd
 import plotly.graph_objects as go
+from BudgetBook.dated_bank_transfer import DatedBankTransfer
 from BudgetBook.helper import CURRENCY_SYMBOL
 
-from BudgetBook.regular_money_transfer import RegularMoneyTransfer
+from BudgetBook.regular_bank_transfer import RegularBankTransfer
 
 
 import plotly.express as px
 
 
-class MoneyTransferVisualizer:
+class BankTransferVisualizer:
     def __init__(self) -> None:
-        self._scheduled_transfers: List[RegularMoneyTransfer] = []
+        self._scheduled_transfers: List[RegularBankTransfer] = []
         self._from_date = None
         self._to_date = None
         self._dataframe_cache = None
@@ -24,10 +25,10 @@ class MoneyTransferVisualizer:
         self._from_date = None
         self._to_date = None
 
-    def add_transfer(self, transfer: RegularMoneyTransfer):
+    def add_transfer(self, transfer: RegularBankTransfer):
         self._scheduled_transfers.append(transfer)
 
-    def add_transfers(self, transfers: List[RegularMoneyTransfer]):
+    def add_transfers(self, transfers: List[RegularBankTransfer]):
         self._scheduled_transfers.extend(transfers)
 
     def set_analysis_interval(self, from_date, to_date):
@@ -44,22 +45,21 @@ class MoneyTransferVisualizer:
         indivdual_transfers = []
 
         for scheduled_transfer in self._scheduled_transfers:
-            transfers = [
-                (
-                    transfer.get_date(),
-                    transfer.get_category(),
-                    transfer.get_name(),
-                    transfer.get_desc(),
-                    transfer.get_amount(),
-                )
-                for transfer in scheduled_transfer.iterate(
-                    from_date=self._from_date, up_to=self._to_date
-                )
-            ]
-            indivdual_transfers.extend(transfers)
+            if isinstance(scheduled_transfer, RegularBankTransfer):
+                transfers = [
+                    transfer.to_dict()
+                    for transfer in scheduled_transfer.iterate(
+                        from_date=self._from_date, up_to=self._to_date
+                    )
+                ]
+                indivdual_transfers.extend(transfers)
+            elif isinstance(scheduled_transfer, DatedBankTransfer):
+                indivdual_transfers.append(scheduled_transfer.to_dict())
+            else:
+                raise AttributeError("Invalid type")
 
-        self._dataframe_cache = pd.DataFrame(
-            indivdual_transfers, columns=["date", "category", "name", "desc", "amount"]
+        self._dataframe_cache = pd.DataFrame.from_records(
+            indivdual_transfers,
         )
         self._dataframe_cache["category"] = [
             str(s) for s in self._dataframe_cache["category"]
@@ -71,7 +71,6 @@ class MoneyTransferVisualizer:
             datetime.date(year=d.year, month=d.month, day=1)
             for d in self._dataframe_cache.index
         ]
-        print("to_df_called")
 
     def plot_payments_per_month(self):
         df = self._dataframe_cache.reset_index()
@@ -89,7 +88,7 @@ class MoneyTransferVisualizer:
                     x=curr_df["date_without_day"],
                     y=curr_df["abs_amount"],
                     text=[
-                        f"{d['date']: %d.%m.%Y}<br>{d['name'][:40]}"
+                        f"{d['date']: %d.%m.%Y}<br>{d['payment_party'][:40]}"
                         for idx, d in curr_df.iterrows()
                     ],
                     marker_color=self.category_to_color_map[category],
@@ -173,6 +172,7 @@ class MoneyTransferVisualizer:
             go.Pie(
                 values=amount_per_category,
                 labels=amount_per_category.index,
+                hovertemplate=f"%{{label}}<br>%{{value}}{CURRENCY_SYMBOL}<br>",
             )
         )
         fig.update_traces(

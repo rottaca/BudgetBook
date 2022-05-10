@@ -1,7 +1,7 @@
 from dateutil.relativedelta import relativedelta
 
 
-class MoneyTransferInterval:
+class BankTransferInterval:
     def __init__(self, years: int = 0, months: int = 0, days: int = 0) -> None:
         if years == 0 and months == 0 and days == 0:
             raise AttributeError("Interval has to be larger than 0 days!")
@@ -12,19 +12,15 @@ class MoneyTransferInterval:
 
     @staticmethod
     def monthly():
-        return MoneyTransferInterval(months=1)
+        return BankTransferInterval(months=1)
 
     @staticmethod
     def quaterly():
-        return MoneyTransferInterval(months=4)
+        return BankTransferInterval(months=4)
 
     @staticmethod
     def yearly():
-        return MoneyTransferInterval(years=1)
-
-    @staticmethod
-    def once():
-        return None
+        return BankTransferInterval(years=1)
 
     def __str__(self) -> str:
         s = []

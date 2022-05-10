@@ -15,14 +15,14 @@ SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "src"))
 sys.path.append(SRC_DIR)
 
 from BudgetBook.account_statement_parser import AccountStatementCsvParser
-from BudgetBook.money_transfer_visualizer import MoneyTransferVisualizer
+from BudgetBook.bank_transfer_visualizer import BankTransferVisualizer
 
 
 def year(year: int) -> date:
     return date(year=year, month=1, day=1)
 
 
-# builder = ReocurringMoneyTransferBuilder()
+# builder = ReocurringBankTransferBuilder()
 # builder.set_first_ocurrence(2022)
 # builder.set_last_ocurrence(2023)
 # for i in range(10):
@@ -33,17 +33,17 @@ def year(year: int) -> date:
 #     )
 #     builder.set_category(cat)
 #     builder.set_interval(0, random.randint(1, 5), 0)
-#     builder.schedule_money_transfer(f"dummy {i}", amount)
+#     builder.schedule_bank_transfer(f"dummy {i}", amount)
 
 # scheduled_transfers = builder.get_scheduled_transfers()
 
 csv_parser = AccountStatementCsvParser(
     r"D:\Benutzer\Andreas\Downloads\Umsaetze_2022.05.01.csv",
-    rf"{SRC_DIR}\BudgetBook\category_mapping.yaml",
+    "configuration.yaml",
 )
 scheduled_transfers = csv_parser.to_scheduled_transfers()
 
-manager = MoneyTransferVisualizer()
+manager = BankTransferVisualizer()
 manager.add_transfers(scheduled_transfers)
 
 default_start_date, default_end_date = date(year=2021, month=5, day=1), date(
