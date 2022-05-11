@@ -8,7 +8,7 @@ from BudgetBook.dated_bank_transfer import DatedBankTransfer
 class AccountStatementCsvParser:
     def __init__(self, csv_statement_path, config_path):
         self._config = ConfigParser(config_path)
-        self._category_parser = CategoryParser(self._config.get_category_mapping())
+        self._category_parser = CategoryParser(self._config)
 
         self._col_name_sender_receiver = self._config.get_csv_column_payment_party()
         self._col_amount = "Betrag"
@@ -47,18 +47,11 @@ class AccountStatementCsvParser:
                     self._get_date(row),
                     self._get_amount(row),
                     self._get_description(row),
-                    self._map_to_category(row),
+                    self._category_parser.get_category_for_record(row),
                 )
             )
 
         return scheduled_transfers
-
-    def _map_to_category(self, row):
-        return self._category_parser.get_category(
-            self._get_amount(row),
-            self._get_payment_party(row),
-            self._get_description(row),
-        )
 
     def _get_amount(self, df):
         return df[self._config.get_csv_column_amount()]

@@ -94,9 +94,14 @@ def generate_tabs(manager):
         dbc.CardBody(
             [
                 dcc.Graph(
+                    id="plot_income_per_month",
+                    figure=manager.plot_income_per_month(),
+                    style={"height": "45vh"},
+                ),
+                dcc.Graph(
                     id="plot_payments_per_month",
                     figure=manager.plot_payments_per_month(),
-                    style={"height": "80vh"},
+                    style={"height": "60vh"},
                 ),
             ]
         ),
@@ -106,7 +111,7 @@ def generate_tabs(manager):
     return [
         dbc.Tab(tab1_content, label="Overview"),
         dbc.Tab(tab2_content, label="Transfers"),
-        dbc.Tab(tab3_content, label="Payments"),
+        dbc.Tab(tab3_content, label="Individual Transfers"),
     ]
 
 

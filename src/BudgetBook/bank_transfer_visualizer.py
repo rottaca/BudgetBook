@@ -54,7 +54,11 @@ class BankTransferVisualizer:
                 ]
                 indivdual_transfers.extend(transfers)
             elif isinstance(scheduled_transfer, DatedBankTransfer):
-                indivdual_transfers.append(scheduled_transfer.to_dict())
+                if (
+                    scheduled_transfer.date >= self._from_date
+                    and scheduled_transfer.date < self._to_date
+                ):
+                    indivdual_transfers.append(scheduled_transfer.to_dict())
             else:
                 raise AttributeError("Invalid type")
 
@@ -100,6 +104,37 @@ class BankTransferVisualizer:
             title="Payments Per Month",
             xaxis_title="[Date]",
             yaxis_title=f"Payments Per Month [{CURRENCY_SYMBOL}]",
+        )
+
+        return fig
+
+    def plot_income_per_month(self):
+        df = self._dataframe_cache.reset_index()
+        df = df[df["amount"] > 0]
+
+        fig = go.Figure()
+
+        for category in df["category"].unique():
+            mask = df["category"] == category
+            curr_df = df[mask]
+            fig.add_trace(
+                go.Bar(
+                    name=category,
+                    x=curr_df["date_without_day"],
+                    y=curr_df["amount"],
+                    text=[
+                        f"{d['date']: %d.%m.%Y}<br>{d['payment_party'][:40]}"
+                        for idx, d in curr_df.iterrows()
+                    ],
+                    marker_color=self.category_to_color_map[category],
+                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
+                ),
+            )
+        fig.update_layout(
+            barmode="stack",
+            title="Income Per Month",
+            xaxis_title="[Date]",
+            yaxis_title=f"Income Per Month [{CURRENCY_SYMBOL}]",
         )
 
         return fig
@@ -172,7 +207,7 @@ class BankTransferVisualizer:
             go.Pie(
                 values=amount_per_category,
                 labels=amount_per_category.index,
-                hovertemplate=f"%{{label}}<br>%{{value}}{CURRENCY_SYMBOL}<br>",
+                hovertemplate=f"%{{label}}<br>%{{value}} {CURRENCY_SYMBOL}<br><extra></extra>",
             )
         )
         fig.update_traces(

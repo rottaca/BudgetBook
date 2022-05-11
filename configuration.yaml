@@ -10,26 +10,23 @@ statement_parser:
 
 category_mapping:
     SAVINGS:
-        sender: ["andreas rottach"]
+        payment_party: ["andreas rottach"]
     SALERY:
-        desc: ["lohn", "gehalt"]
+        description: ["lohn", "gehalt"]
     INSURANCE:
-        sender: ["versicherung", "assuranc"]
+        payment_party: ["versicherung", "assuranc"]
     MOBILITY:
         or:
-            desc: ["tank", "park", "garage", "autohaus", "autocenter"]
-            sender: ["tank", "bundeskasse in weiden", "vergoelst", "shell"]
+            description: ["tank", "park", "garage", "autohaus", "autocenter"]
+            payment_party:
+                ["tank", "bundeskasse in weiden", "vergoelst", "shell"]
     HOUSHOLD:
+        payment_party: ["swu", "vodafone", "klarmobil"]
+    GROCERIES:
         or:
-            desc: ["miet", "rewe", "finkbeiner", "takeaway", "lidl"]
-            sender:
-                [
-                    "lidl",
-                    "rewe",
-                    "finkbeiner",
-                    "ecenter",
-                    "swu",
-                    "drogerie",
-                    "vodafone",
-                    "klarmobil",
-                ]
+            description: ["rewe", "finkbeiner", "takeaway", "lidl"]
+            payment_party: ["lidl", "rewe", "finkbeiner", "ecenter", "drogerie"]
+    RENT:
+        description: ["miet"]
+    ONLINE_SHOPPING:
+        description: ["paypal", "amazon"]

@@ -8,8 +8,6 @@ class ConfigKeywords(enum.Enum):
 
     CATEGORY_RULE_AND = "and"
     CATEGORY_RULE_OR = "or"
-    CATEGORY_RULE_DESC_FILTER = "desc"
-    CATEGORY_RULE_SENDER_FILTER = "sender"
 
     CSV_STATEMENT_PARSER_TOPLEVEL = "statement_parser"
     CSV_COLUMNS_TOPLEVEL = "csv_columns"
@@ -39,6 +37,9 @@ class ConfigParser:
 
     def get_category_mapping(self):
         return self._category_mapping
+
+    def get_csv_columns_mapping(self):
+        return self._csv_statement_columns
 
     def get_csv_column_payment_party(self):
         return self._csv_statement_columns[ConfigKeywords.CSV_COL_PAYMENT_PARTY.value]
