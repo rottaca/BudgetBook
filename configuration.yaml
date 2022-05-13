@@ -21,7 +21,8 @@ category_mapping:
             payment_party:
                 ["tank", "bundeskasse in weiden", "vergoelst", "shell"]
     HOUSHOLD:
-        payment_party: ["swu", "vodafone", "klarmobil"]
+        payment_party:
+            ["swu", "vodafone", "klarmobil", "Rundfunk ARD, ZDF, DRadio"]
     GROCERIES:
         or:
             description: ["rewe", "finkbeiner", "takeaway", "lidl"]
@@ -29,4 +30,8 @@ category_mapping:
     RENT:
         description: ["miet"]
     ONLINE_SHOPPING:
-        description: ["paypal", "amazon"]
+        or:
+            description: ["paypal", "amazon"]
+            payment_party: ["paypal", "amazon"]
+    DEPT:
+        payment_party: ["florian rottach"]

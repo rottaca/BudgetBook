@@ -3,19 +3,16 @@ import sys
 from datetime import date, datetime
 
 import dash_bootstrap_components as dbc
-from dash import Dash, dcc, html
+from dash import Dash, dcc, html, dash_table
+from dash.dash_table.Format import Format, Scheme, Symbol
 from dash.dependencies import Input, Output, State
-
-
-# load_figure_template("cosmo")
-
-# pio.templates.default = "cosmo"
 
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "src"))
 sys.path.append(SRC_DIR)
 
 from BudgetBook.account_statement_parser import AccountStatementCsvParser
 from BudgetBook.bank_transfer_visualizer import BankTransferVisualizer
+from BudgetBook.config_parser import ConfigParser, DataColumns
 
 
 def year(year: int) -> date:
@@ -37,13 +34,14 @@ def year(year: int) -> date:
 
 # scheduled_transfers = builder.get_scheduled_transfers()
 
+config = ConfigParser("configuration.yaml")
 csv_parser = AccountStatementCsvParser(
     r"D:\Benutzer\Andreas\Downloads\Umsaetze_2022.05.01.csv",
-    "configuration.yaml",
+    config,
 )
 scheduled_transfers = csv_parser.to_scheduled_transfers()
 
-manager = BankTransferVisualizer()
+manager = BankTransferVisualizer(config)
 manager.add_transfers(scheduled_transfers)
 
 default_start_date, default_end_date = date(year=2021, month=5, day=1), date(
@@ -52,7 +50,7 @@ default_start_date, default_end_date = date(year=2021, month=5, day=1), date(
 manager.set_analysis_interval(default_start_date, default_end_date)
 
 
-def generate_tabs(manager):
+def generate_tabs(manager: BankTransferVisualizer):
     tab1_content = dbc.Card(
         dbc.CardBody(
             [
@@ -108,10 +106,48 @@ def generate_tabs(manager):
         className="mt-3",
     )
 
+    df = manager.plot_statement_dataframe()
+    columns = [
+        {
+            "id": c,
+            "name": c,
+            "type": "numeric",
+            "format": Format(precision=2, scheme=Scheme.fixed),
+        }
+        for c in df.columns
+    ]
+
+    tab4_content = dbc.Card(
+        dbc.CardBody(
+            [
+                dash_table.DataTable(
+                    id="statement-table",
+                    columns=columns,
+                    data=df.to_dict("records"),
+                    filter_action="native",
+                    sort_action="native",
+                    sort_mode="multi",
+                    page_action="native",
+                    page_current=0,
+                    page_size=20,
+                    style_cell={
+                        "minWidth": "50px",
+                        "maxWidth": "200px",
+                        "whiteSpace": "normal",
+                        "height": "auto",
+                        "textAlign": "left",
+                    },
+                )
+            ]
+        ),
+        className="mt-3",
+    )
+
     return [
         dbc.Tab(tab1_content, label="Overview"),
         dbc.Tab(tab2_content, label="Transfers"),
         dbc.Tab(tab3_content, label="Individual Transfers"),
+        dbc.Tab(tab4_content, label="Dataset"),
     ]
 
 
@@ -144,6 +180,7 @@ input_form = dbc.Form(
     ],
     class_name="m-2",
 )
+
 from flask import Flask
 
 server = Flask(__name__)

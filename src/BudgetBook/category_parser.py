@@ -1,7 +1,7 @@
 import enum
 import yaml
 
-from BudgetBook.config_parser import ConfigKeywords, ConfigParser
+from BudgetBook.config_parser import DataColumns, ConfigKeywords, ConfigParser
 
 
 class CategoryParser:
@@ -15,12 +15,7 @@ class CategoryParser:
             if self._check_category_match(record, mapping_rules):
                 return category
 
-        return (
-            "UNKNOWN_INCOME"
-            if record[self._csv_columns_mapping[ConfigKeywords.CSV_COL_AMOUNT.value]]
-            > 0
-            else "UNKNOWN_PAYMENT"
-        )
+        return "UNKNOWN_INCOME" if record[DataColumns.AMOUNT] > 0 else "UNKNOWN_PAYMENT"
 
     @staticmethod
     def _field_contains_any(field, candiates):
@@ -28,7 +23,7 @@ class CategoryParser:
 
     def _check_and(self, record, mapping_rules):
         for filter_key, filter_values in mapping_rules[
-            ConfigKeywords.CATEGORY_RULE_AND.value
+            ConfigKeywords.CATEGORY_RULE_AND
         ].items():
             if not self._check_category_match(
                 record,
@@ -39,7 +34,7 @@ class CategoryParser:
 
     def _check_or(self, record, mapping_rules):
         for filter_key, filter_values in mapping_rules[
-            ConfigKeywords.CATEGORY_RULE_OR.value
+            ConfigKeywords.CATEGORY_RULE_OR
         ].items():
             if self._check_category_match(
                 record,
@@ -49,8 +44,8 @@ class CategoryParser:
         return False
 
     def _check_category_match(self, record, mapping_rules):
-        has_and = ConfigKeywords.CATEGORY_RULE_AND.value in mapping_rules
-        has_or = ConfigKeywords.CATEGORY_RULE_OR.value in mapping_rules
+        has_and = ConfigKeywords.CATEGORY_RULE_AND in mapping_rules
+        has_or = ConfigKeywords.CATEGORY_RULE_OR in mapping_rules
 
         if has_and:
             return self._check_and(record, mapping_rules)
@@ -59,7 +54,7 @@ class CategoryParser:
         else:
             for filter_key, filter_values in mapping_rules.items():
                 if CategoryParser._field_contains_any(
-                    record[self._csv_columns_mapping[filter_key]], filter_values
+                    record[filter_key], filter_values
                 ):
                     return True
 

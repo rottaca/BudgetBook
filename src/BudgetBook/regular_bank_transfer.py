@@ -10,7 +10,7 @@ class RegularBankTransfer:
         payment_party: str,
         frequency: RegularEvent,
         amount: float,
-        category: str = "unknown",
+        category: str = "",
         desc: str = "",
     ) -> None:
         self._frequency = frequency

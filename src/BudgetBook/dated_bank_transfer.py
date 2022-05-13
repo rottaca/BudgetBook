@@ -1,5 +1,6 @@
 import datetime
 from typing import Tuple
+from BudgetBook.config_parser import DataColumns
 
 from BudgetBook.helper import CURRENCY_SYMBOL
 
@@ -11,7 +12,7 @@ class DatedBankTransfer:
         date: datetime.date,
         amount: float,
         desc: str = "",
-        category: str = "unknown",
+        category: str = "",
     ) -> None:
         self.category = category
         self.date = date
@@ -21,11 +22,11 @@ class DatedBankTransfer:
 
     def to_dict(self) -> Tuple:
         return {
-            "payment_party": self.payment_party,
-            "date": self.date,
-            "amount": self.amount,
-            "desc": self.desc,
-            "category": self.category,
+            DataColumns.PAYMENT_PARTY: self.payment_party,
+            DataColumns.DATE: self.date,
+            DataColumns.AMOUNT: self.amount,
+            DataColumns.DESCRIPTION: self.desc,
+            DataColumns.CATEGORY: self.category,
         }
 
     def __str__(self) -> str:

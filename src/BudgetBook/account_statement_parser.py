@@ -1,41 +1,45 @@
+from datetime import datetime
+import numpy as np
 import pandas as pd
 
 from BudgetBook.category_parser import CategoryParser
-from BudgetBook.config_parser import ConfigParser
+from BudgetBook.config_parser import DataColumns, ConfigParser
 from BudgetBook.dated_bank_transfer import DatedBankTransfer
 
 
 class AccountStatementCsvParser:
-    def __init__(self, csv_statement_path, config_path):
-        self._config = ConfigParser(config_path)
+    def __init__(self, csv_statement_path, config):
+        self._config = config
         self._category_parser = CategoryParser(self._config)
 
-        self._col_name_sender_receiver = self._config.get_csv_column_payment_party()
-        self._col_amount = "Betrag"
-        self._col_type_of_transer = "Buchungstext"
-        self._col_transfer_desc = "Verwendungszweck"
-        self._col_date = "Buchungstag"
-        self._col_date_format = "%d.%m.%Y"
+        map_internal_to_csv_column = self._config.get_csv_columns_mapping()
+        map_csv_to_internal_column = {
+            v: k for k, v in map_internal_to_csv_column.items()
+        }
 
-        self._csv_data = pd.read_csv(csv_statement_path, sep=";")
-        self._csv_data[self._col_amount] = (
-            self._csv_data[self._col_amount]
-            .apply(lambda x: x.replace(",", "."))
-            .astype(float)
+        self._csv_data = pd.read_csv(
+            csv_statement_path,
+            sep=";",
+            decimal=",",
+            na_filter=False,
+            dtype={
+                map_internal_to_csv_column[DataColumns.AMOUNT]: np.float32,
+                map_internal_to_csv_column[DataColumns.DESCRIPTION]: str,
+                map_internal_to_csv_column[DataColumns.PAYMENT_PARTY]: str,
+                map_internal_to_csv_column[DataColumns.TYPE_OF_TRANSFER]: str,
+                map_internal_to_csv_column[DataColumns.DATE]: str,
+            },
         )
 
-        self._csv_data[self._col_name_sender_receiver] = (
-            self._csv_data[self._col_name_sender_receiver]
-            .astype(str)
-            .apply(lambda x: x.replace("nan", "Unknown"))
+        # Rename columns to internal names
+        self._csv_data = self._csv_data[map_internal_to_csv_column.values()]
+        self._csv_data.rename(
+            columns=map_csv_to_internal_column,
+            inplace=True,
         )
 
-        self._csv_data[self._col_transfer_desc] = self._csv_data[
-            self._col_transfer_desc
-        ].astype(str)
-
-        self._csv_data[self._col_date] = pd.to_datetime(
-            self._csv_data[self._col_date], format=self._config.get_csv_date_format()
+        self._csv_data[DataColumns.DATE] = pd.to_datetime(
+            self._csv_data[DataColumns.DATE], format=self._config.get_csv_date_format()
         )
 
     def to_scheduled_transfers(self):
@@ -43,27 +47,12 @@ class AccountStatementCsvParser:
         for _, row in self._csv_data.iterrows():
             scheduled_transfers.append(
                 DatedBankTransfer(
-                    self._get_payment_party(row),
-                    self._get_date(row),
-                    self._get_amount(row),
-                    self._get_description(row),
+                    row[DataColumns.PAYMENT_PARTY],
+                    row[DataColumns.DATE],
+                    row[DataColumns.AMOUNT],
+                    row[DataColumns.DESCRIPTION],
                     self._category_parser.get_category_for_record(row),
                 )
             )
 
         return scheduled_transfers
-
-    def _get_amount(self, df):
-        return df[self._config.get_csv_column_amount()]
-
-    def _get_payment_party(self, df):
-        return df[self._config.get_csv_column_payment_party()]
-
-    def _get_type_of_transfer(self, df):
-        return df[self._config.get_csv_column_type_of_transfer()]
-
-    def _get_description(self, df):
-        return df[self._config.get_csv_column_description()]
-
-    def _get_date(self, df):
-        return df[self._config.get_csv_column_date()].date()
