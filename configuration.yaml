@@ -8,30 +8,44 @@ statement_parser:
 
     date_format: "%d.%m.%Y"
 
+    internal_transfer_categories: ["Savings"]
+
 category_mapping:
-    SAVINGS:
-        payment_party: ["andreas rottach"]
-    SALERY:
+    Salery:
         description: ["lohn", "gehalt"]
-    INSURANCE:
+    Insurance:
         payment_party: ["versicherung", "assuranc"]
-    MOBILITY:
+    Mobility:
         or:
             description: ["tank", "park", "garage", "autohaus", "autocenter"]
             payment_party:
-                ["tank", "bundeskasse in weiden", "vergoelst", "shell"]
-    HOUSHOLD:
-        payment_party:
-            ["swu", "vodafone", "klarmobil", "Rundfunk ARD, ZDF, DRadio"]
-    GROCERIES:
+                ["tank", "bundeskasse in weiden", "vergoelst", "shell", "aral"]
+    Household:
+        payment_party: ["swu"]
+    Multimedia/Internet:
         or:
-            description: ["rewe", "finkbeiner", "takeaway", "lidl"]
-            payment_party: ["lidl", "rewe", "finkbeiner", "ecenter", "drogerie"]
-    RENT:
+            description: ["spotify"]
+            payment_party:
+                ["vodafone", "klarmobil", "Rundfunk ARD, ZDF, DRadio"]
+    Groceries:
+        or:
+            description: ["takeaway.com"]
+            payment_party:
+                [
+                    "lidl",
+                    "rewe",
+                    "finkbeiner",
+                    "ecenter",
+                    "drogerie",
+                    "kaufland",
+                ]
+    Rent:
         description: ["miet"]
-    ONLINE_SHOPPING:
+    Online Shopping:
         or:
             description: ["paypal", "amazon"]
             payment_party: ["paypal", "amazon"]
-    DEPT:
+    Dept:
         payment_party: ["florian rottach"]
+    Savings:
+        payment_party: ["andreas rottach"]

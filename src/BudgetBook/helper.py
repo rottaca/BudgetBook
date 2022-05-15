@@ -1,6 +1,6 @@
 import datetime
 
-CURRENCY_SYMBOL = "Euro"
+CURRENCY_SYMBOL = "€"
 
 
 COLORMAP = [

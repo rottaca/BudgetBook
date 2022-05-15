@@ -8,7 +8,7 @@ from BudgetBook.dated_bank_transfer import DatedBankTransfer
 
 
 class AccountStatementCsvParser:
-    def __init__(self, csv_statement_path, config):
+    def __init__(self, csv_statement_path_or_iostream, config):
         self._config = config
         self._category_parser = CategoryParser(self._config)
 
@@ -18,7 +18,7 @@ class AccountStatementCsvParser:
         }
 
         self._csv_data = pd.read_csv(
-            csv_statement_path,
+            csv_statement_path_or_iostream,
             sep=";",
             decimal=",",
             na_filter=False,
@@ -38,17 +38,18 @@ class AccountStatementCsvParser:
             inplace=True,
         )
 
+        # Parse date
         self._csv_data[DataColumns.DATE] = pd.to_datetime(
             self._csv_data[DataColumns.DATE], format=self._config.get_csv_date_format()
         )
 
-    def to_scheduled_transfers(self):
+    def to_dated_bank_transfers(self):
         scheduled_transfers = []
         for _, row in self._csv_data.iterrows():
             scheduled_transfers.append(
                 DatedBankTransfer(
                     row[DataColumns.PAYMENT_PARTY],
-                    row[DataColumns.DATE],
+                    row[DataColumns.DATE].date(),
                     row[DataColumns.AMOUNT],
                     row[DataColumns.DESCRIPTION],
                     self._category_parser.get_category_for_record(row),

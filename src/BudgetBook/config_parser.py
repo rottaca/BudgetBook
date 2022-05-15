@@ -15,6 +15,8 @@ class ConfigKeywords:
 
     CSV_DATE_FORMAT = "date_format"
 
+    CATEGORIES_TO_IGNORE = "internal_transfer_categories"
+
 
 class DataColumns:
     PAYMENT_PARTY = "payment_party"
@@ -27,7 +29,7 @@ class DataColumns:
 
 DATA_COLUMN_TO_DISPLAY_NMAE = {
     DataColumns.PAYMENT_PARTY: "Payment Party",
-    DataColumns.AMOUNT: f"Amount {CURRENCY_SYMBOL}",
+    DataColumns.AMOUNT: f"Amount [{CURRENCY_SYMBOL}]",
     DataColumns.TYPE_OF_TRANSFER: "Type Of Transfer",
     DataColumns.DESCRIPTION: "Description",
     DataColumns.DATE: "Date",
@@ -48,6 +50,9 @@ class ConfigParser:
             ConfigKeywords.CSV_COLUMNS_TOPLEVEL
         ]
 
+    def get_internal_transfer_categories(self) -> list:
+        return self._statement_parser[ConfigKeywords.CATEGORIES_TO_IGNORE]
+
     def get_csv_date_format(self) -> str:
         return self._statement_parser[ConfigKeywords.CSV_DATE_FORMAT]
 
@@ -56,18 +61,3 @@ class ConfigParser:
 
     def get_csv_columns_mapping(self) -> dict:
         return self._csv_statement_columns
-
-    def get_csv_column_payment_party(self):
-        return self._csv_statement_columns[DataColumns.PAYMENT_PARTY]
-
-    def get_csv_column_amount(self):
-        return self._csv_statement_columns[DataColumns.AMOUNT]
-
-    def get_csv_column_type_of_transfer(self):
-        return self._csv_statement_columns[DataColumns.TYPE_OF_TRANSFER]
-
-    def get_csv_column_description(self):
-        return self._csv_statement_columns[DataColumns.DESCRIPTION]
-
-    def get_csv_column_date(self):
-        return self._csv_statement_columns[DataColumns.DATE]

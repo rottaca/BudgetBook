@@ -1,3 +1,5 @@
+import base64
+import io
 import os.path
 import sys
 from datetime import date, datetime
@@ -39,15 +41,17 @@ csv_parser = AccountStatementCsvParser(
     r"D:\Benutzer\Andreas\Downloads\Umsaetze_2022.05.01.csv",
     config,
 )
-scheduled_transfers = csv_parser.to_scheduled_transfers()
+scheduled_transfers = csv_parser.to_dated_bank_transfers()
 
 manager = BankTransferVisualizer(config)
-manager.add_transfers(scheduled_transfers)
+# manager.add_transfers(scheduled_transfers)
 
 default_start_date, default_end_date = date(year=2021, month=5, day=1), date(
     year=2022, month=5, day=1
 )
-manager.set_analysis_interval(default_start_date, default_end_date)
+# manager.set_analysis_interval(default_start_date, default_end_date)
+
+last_n_clicks = None
 
 
 def generate_tabs(manager: BankTransferVisualizer):
@@ -99,6 +103,11 @@ def generate_tabs(manager: BankTransferVisualizer):
                 dcc.Graph(
                     id="plot_payments_per_month",
                     figure=manager.plot_payments_per_month(),
+                    style={"height": "60vh"},
+                ),
+                dcc.Graph(
+                    id="plot_internal_transfers_per_month",
+                    figure=manager.plot_internal_transfers_per_month(),
                     style={"height": "60vh"},
                 ),
             ]
@@ -154,6 +163,24 @@ def generate_tabs(manager: BankTransferVisualizer):
 input_form = dbc.Form(
     [
         dbc.Row(
+            dbc.Col(
+                dcc.Upload(
+                    id="upload-data",
+                    children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin": "10px",
+                    },
+                )
+            )
+        ),
+        dbc.Row(
             [
                 dbc.Label("Date Range", html_for="date-picker-range", width=2),
                 dbc.Col(
@@ -162,7 +189,7 @@ input_form = dbc.Form(
                         initial_visible_month=datetime.now(),
                         start_date=default_start_date,
                         end_date=default_end_date,
-                        display_format="MM/YYYY",
+                        display_format="DD/MM/YYYY",
                     ),
                     width=8,
                 ),
@@ -176,6 +203,70 @@ input_form = dbc.Form(
             dbc.Col(
                 dbc.Label("", id="error", width=2),
             )
+        ),
+    ],
+    class_name="m-2",
+)
+
+input_form = dbc.Form(
+    [
+        dbc.Row(
+            [
+                dbc.Label(
+                    "Statement Dataset",
+                    html_for="upload-data",
+                    width=2,
+                ),
+                dbc.Col(
+                    dcc.Upload(
+                        id="upload-data",
+                        children=html.Div("Upload a CSV file for evaluation."),
+                        style={
+                            "width": "284px",
+                            "height": "60px",
+                            "lineHeight": "60px",
+                            "borderWidth": "1px",
+                            "borderStyle": "dashed",
+                            "borderRadius": "5px",
+                            "textAlign": "center",
+                        },
+                    )
+                ),
+            ],
+            class_name="mb-3",
+        ),
+        dbc.Row(
+            [
+                dbc.Label(
+                    "Select a date range to evaluate",
+                    html_for="date-picker-range",
+                    width=2,
+                ),
+                dbc.Col(
+                    dcc.DatePickerRange(
+                        id="date-picker-range",
+                        initial_visible_month=datetime.now(),
+                        start_date=default_start_date,
+                        end_date=default_end_date,
+                        display_format="DD/MM/YYYY",
+                    ),
+                    width=8,
+                ),
+            ],
+            class_name="mb-3",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Button("Update", id="update-button"),
+                    width=2,
+                ),
+                dbc.Col(
+                    dbc.Label("", id="error", width=2),
+                    width=8,
+                ),
+            ],
+            class_name="mb-3",
         ),
     ],
     class_name="m-2",
@@ -203,36 +294,86 @@ app.layout = dbc.Container(
 )
 
 
+def parse_uploaded_csv(contents, filename):
+    content_type, content_string = contents.split(",")
+
+    decoded = base64.b64decode(content_string)
+    if "csv" in filename:
+        iostream = io.StringIO(decoded.decode("utf-8"))
+        csv_parser = AccountStatementCsvParser(
+            iostream,
+            config,
+        )
+
+        manager.clear_transfers()
+        manager.add_transfers(csv_parser.to_dated_bank_transfers())
+        manager.set_analysis_interval(default_start_date, default_end_date)
+
+
 @app.callback(
     [Output("collapse", "is_open"), Output("collapse-button", "children")],
     [Input("collapse-button", "n_clicks")],
     [State("collapse", "is_open")],
 )
 def toggle_collapse(n, is_open):
-    print("collapse called")
     if n:
         return not is_open, "Hide Settings" if not is_open else "Show Settings"
     return is_open, "Show Settings"
 
 
 @app.callback(
-    [Output("tabs", "children"), Output("error", "children")],
+    [
+        Output("tabs", "children"),
+        Output("date-picker-range", "start_date"),
+        Output("date-picker-range", "end_date"),
+        Output("error", "children"),
+    ],
     State("date-picker-range", "start_date"),
     State("date-picker-range", "end_date"),
     State("tabs", "children"),
     Input("update-button", "n_clicks"),
+    Input("upload-data", "contents"),
+    State("upload-data", "filename"),
 )
-def update_output(start_date, end_date, curr_tab_children, n_clicks):
-    print("Update called")
+def update_output(
+    start_date, end_date, curr_tab_children, n_clicks, contents, filename
+):
+    global last_n_clicks
+    # File was uploaded
+    if filename is not None and contents is not None:
+        if not filename.endswith(".csv"):
+            return (
+                curr_tab_children,
+                start_date,
+                end_date,
+                "Invalid file type selected. Only CSV is supported!",
+            )
+        else:
+            parse_uploaded_csv(contents, filename)
+            if manager.dataset_is_valid():
+                start_date = manager._dataframe_cache.index.min().strftime("%Y-%m-%d")
+                end_date = manager._dataframe_cache.index.max().strftime("%Y-%m-%d")
+            else:
+                return curr_tab_children, start_date, end_date, "Internal error!"
+
+    if last_n_clicks == n_clicks:
+        return curr_tab_children, start_date, end_date, ""
+
+    last_n_clicks = n_clicks
+
     if start_date is not None and end_date is not None and start_date < end_date:
-        manager.set_analysis_interval(
-            datetime.strptime(start_date, "%Y-%m-%d").date(),
-            datetime.strptime(end_date, "%Y-%m-%d").date(),
-        )
-        return generate_tabs(manager), ""
+        if manager.dataset_is_valid():
+            manager.set_analysis_interval(
+                datetime.strptime(start_date, "%Y-%m-%d").date(),
+                datetime.strptime(end_date, "%Y-%m-%d").date(),
+            )
+        else:
+            return curr_tab_children, start_date, end_date, "Internal error!"
     else:
-        return curr_tab_children, "Date Range not valid!"
+        return curr_tab_children, start_date, end_date, "Date Range not valid!"
+
+    return generate_tabs(manager), start_date, end_date, "Data updated!"
 
 
 if __name__ == "__main__":
-    app.run_server(debug=False)
+    app.run_server(debug=True)

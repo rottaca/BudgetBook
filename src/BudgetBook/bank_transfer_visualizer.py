@@ -1,5 +1,6 @@
 import datetime
 from typing import List
+import numpy as np
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -42,17 +43,25 @@ class BankTransferVisualizer:
         self._to_date = to_date
         self._to_dataframe()
 
-        self.category_to_color_map = {
-            c: COLORMAP[idx]
-            for idx, c in enumerate(
-                self._dataframe_cache[DataColumns.CATEGORY].unique()
-            )
-        }
+        if self._dataframe_cache is not None:
+            self.category_to_color_map = {
+                c: COLORMAP[idx]
+                for idx, c in enumerate(
+                    self._dataframe_cache[DataColumns.CATEGORY].unique()
+                )
+            }
+
+    def dataset_is_valid(self):
+        return self._dataframe_cache is not None
 
     def get_dataframe(self):
         return self._dataframe_cache
 
     def _to_dataframe(self):
+        if len(self._scheduled_transfers) == 0:
+            self._dataframe_cache = None
+            return
+
         indivdual_transfers = []
 
         for scheduled_transfer in self._scheduled_transfers:
@@ -76,7 +85,9 @@ class BankTransferVisualizer:
         self._dataframe_cache = pd.DataFrame.from_records(
             indivdual_transfers,
         )
+
         self._dataframe_cache.set_index(DataColumns.DATE, inplace=True)
+        self._dataframe_cache.index = pd.DatetimeIndex(self._dataframe_cache.index)
 
         self._dataframe_cache["date_without_day"] = [
             datetime.date(year=d.year, month=d.month, day=1)
@@ -84,6 +95,10 @@ class BankTransferVisualizer:
         ]
 
     def plot_statement_dataframe(self):
+
+        if self._dataframe_cache is None:
+            return pd.DataFrame()
+
         df = self._dataframe_cache.reset_index()
         df = df[
             [
@@ -101,7 +116,14 @@ class BankTransferVisualizer:
         return df
 
     def plot_payments_per_month(self):
+        if self._dataframe_cache is None:
+            return go.Figure()
+
         df = self._dataframe_cache.reset_index()
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
+        df = df[mask]
+
         df = df[df[DataColumns.AMOUNT] < 0]
         df["abs_amount"] = -df[DataColumns.AMOUNT]
 
@@ -132,8 +154,54 @@ class BankTransferVisualizer:
 
         return fig
 
-    def plot_income_per_month(self):
+    def plot_internal_transfers_per_month(self):
+
+        if self._dataframe_cache is None:
+            return go.Figure()
+
         df = self._dataframe_cache.reset_index()
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = df[DataColumns.CATEGORY].isin(internal_transfer_categories)
+        df = df[mask]
+
+        fig = go.Figure()
+
+        for category in df[DataColumns.CATEGORY].unique():
+            mask = df[DataColumns.CATEGORY] == category
+            curr_df = df[mask]
+            fig.add_trace(
+                go.Bar(
+                    name=category,
+                    x=curr_df["date_without_day"],
+                    y=curr_df[DataColumns.AMOUNT],
+                    text=[
+                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
+                        for _, d in curr_df.iterrows()
+                    ],
+                    marker_color=self.category_to_color_map[category],
+                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
+                ),
+            )
+        fig.update_layout(
+            barmode="relative",
+            title="Internal Transfers Per Month",
+            xaxis_title="[Date]",
+            yaxis_title=f"Internal Transfers Per Month [{CURRENCY_SYMBOL}]",
+            showlegend=True,
+        )
+
+        return fig
+
+    def plot_income_per_month(self):
+        if self._dataframe_cache is None:
+            return go.Figure()
+
+        df = self._dataframe_cache.reset_index()
+
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
+        df = df[mask]
+
         df = df[df[DataColumns.AMOUNT] > 0]
 
         fig = go.Figure()
@@ -164,16 +232,24 @@ class BankTransferVisualizer:
         return fig
 
     def plot_balance_per_month(self):
-        fig = go.Figure()
+
+        if self._dataframe_cache is None:
+            return go.Figure()
+
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[mask]
+
         average_balance_per_month = (
-            self._dataframe_cache[DataColumns.AMOUNT]
-            .groupby(by=pd.Grouper(freq="M"))
-            .sum()
+            df[DataColumns.AMOUNT].groupby(by=pd.Grouper(freq="M")).sum()
         )
         average_balance_per_month.index = pd.DatetimeIndex(
             datetime.date(year=d.year, month=d.month, day=1)
             for d in average_balance_per_month.index
         )
+        fig = go.Figure()
         fig.add_trace(
             go.Scatter(
                 name="Average",
@@ -193,12 +269,17 @@ class BankTransferVisualizer:
         return fig
 
     def plot_transfers_per_month(self):
-        df = (
-            self._dataframe_cache.reset_index()
-            .groupby(["date_without_day", DataColumns.CATEGORY])
-            .sum()
-            .reset_index()
+
+        if self._dataframe_cache is None:
+            return go.Figure()
+
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
         )
+        df = self._dataframe_cache[mask]
+
+        df = df.groupby(["date_without_day", DataColumns.CATEGORY]).sum().reset_index()
 
         fig = go.Figure()
 
@@ -223,17 +304,28 @@ class BankTransferVisualizer:
         return fig
 
     def plot_pie_chart_per_cateogry(self):
+
+        if self._dataframe_cache is None:
+            return go.Figure()
+
         grouped_per_category = self._dataframe_cache[
             self._dataframe_cache[DataColumns.AMOUNT] < 0
         ].groupby(by=DataColumns.CATEGORY)
         amount_per_category = grouped_per_category[DataColumns.AMOUNT].sum().abs()
+
+        total_time = (
+            self._dataframe_cache.index.max() - self._dataframe_cache.index.min()
+        )
+        custom_text = [30 * v / total_time.days for v in amount_per_category]
 
         fig = go.Figure()
         fig.add_trace(
             go.Pie(
                 values=amount_per_category,
                 labels=amount_per_category.index,
-                hovertemplate=f"%{{label}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br><extra></extra>",
+                text=custom_text,
+                textinfo="percent",
+                hovertemplate=f"%{{label}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br>%{{text:.2f}} {CURRENCY_SYMBOL}/Month<extra></extra>",
             )
         )
         fig.update_traces(
