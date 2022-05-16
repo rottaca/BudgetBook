@@ -115,6 +115,66 @@ class BankTransferVisualizer:
 
         return df
 
+    def _plot_stacked_by_category_per_month(self, df, amount, title, yaxis_title):
+        fig = go.Figure()
+
+        sum_per_month = (
+            amount.set_axis(df[DataColumns.DATE]).groupby(by=pd.Grouper(freq="M")).sum()
+        )
+        dates = [
+            datetime.date(year=d.year, month=d.month, day=1)
+            for d in sum_per_month.index
+        ]
+        fig.add_trace(
+            go.Scatter(
+                x=dates,
+                y=sum_per_month.values,
+                name="Total Sum",
+                mode="lines+markers",
+                marker_color="black",
+                line_dash="dash",
+                hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{x}}<extra></extra>",
+            )
+        )
+        # for date, sum in sum_per_month.iteritems():
+        #     d = date.date()
+        #     d = datetime.date(year=d.year, month=d.month, day=1)
+        #     fig.add_annotation(
+        #         x=d,
+        #         y=sum,
+        #         text=f"{sum:.2f} {CURRENCY_SYMBOL}",
+        #         yref="y",
+        #         # ayref="y",
+        #         ay=50 if sum < 0 else -50,
+        #     )
+
+        for category in df[DataColumns.CATEGORY].unique():
+            mask = df[DataColumns.CATEGORY] == category
+            curr_df = df[mask]
+            curr_amount = amount[mask]
+            fig.add_trace(
+                go.Bar(
+                    name=category,
+                    x=curr_df["date_without_day"],
+                    y=curr_amount,
+                    text=[
+                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
+                        for _, d in curr_df.iterrows()
+                    ],
+                    marker_color=self.category_to_color_map[category],
+                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
+                ),
+            )
+
+        fig.update_layout(
+            barmode="relative",
+            title=title,
+            xaxis_title="[Date]",
+            yaxis_title=yaxis_title,
+            showlegend=True,
+        )
+        return fig
+
     def plot_payments_per_month(self):
         if self._dataframe_cache is None:
             return go.Figure()
@@ -125,34 +185,14 @@ class BankTransferVisualizer:
         df = df[mask]
 
         df = df[df[DataColumns.AMOUNT] < 0]
-        df["abs_amount"] = -df[DataColumns.AMOUNT]
+        abs_amount = df[DataColumns.AMOUNT].abs()
 
-        fig = go.Figure()
-
-        for category in df[DataColumns.CATEGORY].unique():
-            mask = df[DataColumns.CATEGORY] == category
-            curr_df = df[mask]
-            fig.add_trace(
-                go.Bar(
-                    name=category,
-                    x=curr_df["date_without_day"],
-                    y=curr_df["abs_amount"],
-                    text=[
-                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
-                        for _, d in curr_df.iterrows()
-                    ],
-                    marker_color=self.category_to_color_map[category],
-                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
-                ),
-            )
-        fig.update_layout(
-            barmode="stack",
+        return self._plot_stacked_by_category_per_month(
+            df,
+            abs_amount,
             title="Payments Per Month",
-            xaxis_title="[Date]",
             yaxis_title=f"Payments Per Month [{CURRENCY_SYMBOL}]",
         )
-
-        return fig
 
     def plot_internal_transfers_per_month(self):
 
@@ -164,72 +204,29 @@ class BankTransferVisualizer:
         mask = df[DataColumns.CATEGORY].isin(internal_transfer_categories)
         df = df[mask]
 
-        fig = go.Figure()
-
-        for category in df[DataColumns.CATEGORY].unique():
-            mask = df[DataColumns.CATEGORY] == category
-            curr_df = df[mask]
-            fig.add_trace(
-                go.Bar(
-                    name=category,
-                    x=curr_df["date_without_day"],
-                    y=curr_df[DataColumns.AMOUNT],
-                    text=[
-                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
-                        for _, d in curr_df.iterrows()
-                    ],
-                    marker_color=self.category_to_color_map[category],
-                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
-                ),
-            )
-        fig.update_layout(
-            barmode="relative",
+        return self._plot_stacked_by_category_per_month(
+            df,
+            df[DataColumns.AMOUNT],
             title="Internal Transfers Per Month",
-            xaxis_title="[Date]",
             yaxis_title=f"Internal Transfers Per Month [{CURRENCY_SYMBOL}]",
-            showlegend=True,
         )
-
-        return fig
 
     def plot_income_per_month(self):
         if self._dataframe_cache is None:
             return go.Figure()
 
         df = self._dataframe_cache.reset_index()
-
         internal_transfer_categories = self._config.get_internal_transfer_categories()
         mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
         df = df[mask]
-
         df = df[df[DataColumns.AMOUNT] > 0]
 
-        fig = go.Figure()
-
-        for category in df[DataColumns.CATEGORY].unique():
-            mask = df[DataColumns.CATEGORY] == category
-            curr_df = df[mask]
-            fig.add_trace(
-                go.Bar(
-                    name=category,
-                    x=curr_df["date_without_day"],
-                    y=curr_df[DataColumns.AMOUNT],
-                    text=[
-                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
-                        for _, d in curr_df.iterrows()
-                    ],
-                    marker_color=self.category_to_color_map[category],
-                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
-                ),
-            )
-        fig.update_layout(
-            barmode="stack",
+        return self._plot_stacked_by_category_per_month(
+            df,
+            df[DataColumns.AMOUNT],
             title="Income Per Month",
-            xaxis_title="[Date]",
             yaxis_title=f"Income Per Month [{CURRENCY_SYMBOL}]",
         )
-
-        return fig
 
     def plot_balance_per_month(self):
 

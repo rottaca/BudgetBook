@@ -5,7 +5,8 @@ import sys
 from datetime import date, datetime
 
 import dash_bootstrap_components as dbc
-from dash import Dash, dcc, html, dash_table
+from dash import Dash, dcc, html, dash_table, no_update
+import dash
 from dash.dash_table.Format import Format, Scheme, Symbol
 from dash.dependencies import Input, Output, State
 
@@ -36,6 +37,9 @@ def year(year: int) -> date:
 
 # scheduled_transfers = builder.get_scheduled_transfers()
 
+default_start_date = date(year=2021, month=5, day=1)
+default_end_date = date(year=2022, month=5, day=1)
+
 config = ConfigParser("configuration.yaml")
 csv_parser = AccountStatementCsvParser(
     r"D:\Benutzer\Andreas\Downloads\Umsaetze_2022.05.01.csv",
@@ -44,14 +48,9 @@ csv_parser = AccountStatementCsvParser(
 scheduled_transfers = csv_parser.to_dated_bank_transfers()
 
 manager = BankTransferVisualizer(config)
-# manager.add_transfers(scheduled_transfers)
+manager.add_transfers(scheduled_transfers)
 
-default_start_date, default_end_date = date(year=2021, month=5, day=1), date(
-    year=2022, month=5, day=1
-)
-# manager.set_analysis_interval(default_start_date, default_end_date)
-
-last_n_clicks = None
+manager.set_analysis_interval(default_start_date, default_end_date)
 
 
 def generate_tabs(manager: BankTransferVisualizer):
@@ -220,7 +219,7 @@ input_form = dbc.Form(
                 dbc.Col(
                     dcc.Upload(
                         id="upload-data",
-                        children=html.Div("Upload a CSV file for evaluation."),
+                        children=html.Div("Click to upload a csv file."),
                         style={
                             "width": "284px",
                             "height": "60px",
@@ -262,7 +261,7 @@ input_form = dbc.Form(
                     width=2,
                 ),
                 dbc.Col(
-                    dbc.Label("", id="error", width=2),
+                    dbc.Label("", id="error"),
                     width=8,
                 ),
             ],
@@ -330,50 +329,64 @@ def toggle_collapse(n, is_open):
     ],
     State("date-picker-range", "start_date"),
     State("date-picker-range", "end_date"),
-    State("tabs", "children"),
     Input("update-button", "n_clicks"),
     Input("upload-data", "contents"),
     State("upload-data", "filename"),
 )
-def update_output(
-    start_date, end_date, curr_tab_children, n_clicks, contents, filename
-):
-    global last_n_clicks
-    # File was uploaded
-    if filename is not None and contents is not None:
+def update_output(start_date, end_date, n_clicks, contents, filename):
+    ctx = dash.callback_context
+
+    if not ctx.triggered:
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    error_msg = dash.no_update
+
+    # File uploaded?
+    if ctx.triggered[0]["prop_id"] == "upload-data.contents":
         if not filename.endswith(".csv"):
-            return (
-                curr_tab_children,
-                start_date,
-                end_date,
-                "Invalid file type selected. Only CSV is supported!",
-            )
+            error_msg = "Invalid file type selected. Only CSV is supported!"
         else:
             parse_uploaded_csv(contents, filename)
             if manager.dataset_is_valid():
                 start_date = manager._dataframe_cache.index.min().strftime("%Y-%m-%d")
                 end_date = manager._dataframe_cache.index.max().strftime("%Y-%m-%d")
+                return (
+                    dash.no_update,
+                    start_date,
+                    end_date,
+                    "File Uploaded, adjust the date range and click on update!",
+                )
             else:
-                return curr_tab_children, start_date, end_date, "Internal error!"
+                error_msg = "Internal error!"
 
-    if last_n_clicks == n_clicks:
-        return curr_tab_children, start_date, end_date, ""
-
-    last_n_clicks = n_clicks
-
-    if start_date is not None and end_date is not None and start_date < end_date:
-        if manager.dataset_is_valid():
-            manager.set_analysis_interval(
-                datetime.strptime(start_date, "%Y-%m-%d").date(),
-                datetime.strptime(end_date, "%Y-%m-%d").date(),
-            )
+    elif ctx.triggered[0]["prop_id"] == "update-button.n_clicks":
+        if start_date is not None and end_date is not None and start_date < end_date:
+            if manager.dataset_is_valid():
+                manager.set_analysis_interval(
+                    datetime.strptime(start_date, "%Y-%m-%d").date(),
+                    datetime.strptime(end_date, "%Y-%m-%d").date(),
+                )
+                return (
+                    generate_tabs(manager),
+                    dash.no_update,
+                    dash.no_update,
+                    "Data updated!",
+                )
+            else:
+                error_msg = "Internal error!"
         else:
-            return curr_tab_children, start_date, end_date, "Internal error!"
+            error_msg = "Date Range not valid!"
     else:
-        return curr_tab_children, start_date, end_date, "Date Range not valid!"
+        error_msg = "Invalid trigger!"
 
-    return generate_tabs(manager), start_date, end_date, "Data updated!"
+    return dash.no_update, dash.no_update, dash.no_update, error_msg
 
 
 if __name__ == "__main__":
+
     app.run_server(debug=True)

@@ -29,7 +29,7 @@ category_mapping:
                 ["vodafone", "klarmobil", "Rundfunk ARD, ZDF, DRadio"]
     Groceries:
         or:
-            description: ["takeaway.com"]
+            description: ["takeaway.com", "lidl", "kfc", "ristorante"]
             payment_party:
                 [
                     "lidl",
@@ -47,5 +47,7 @@ category_mapping:
             payment_party: ["paypal", "amazon"]
     Dept:
         payment_party: ["florian rottach"]
+    Shared Account:
+        description: ["IBAN: DE601203000010813"]
     Savings:
         payment_party: ["andreas rottach"]
