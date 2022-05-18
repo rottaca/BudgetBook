@@ -239,17 +239,11 @@ class BankTransferVisualizer:
         )
         df = self._dataframe_cache[mask]
 
-        average_balance_per_month = (
-            df[DataColumns.AMOUNT].groupby(by=pd.Grouper(freq="M")).sum()
-        )
-        average_balance_per_month.index = pd.DatetimeIndex(
-            datetime.date(year=d.year, month=d.month, day=1)
-            for d in average_balance_per_month.index
-        )
+        average_balance_per_month = df[DataColumns.AMOUNT].cumsum()
+
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
-                name="Average",
                 x=average_balance_per_month.index,
                 y=average_balance_per_month,
                 hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{x}}<extra></extra>",
@@ -260,7 +254,7 @@ class BankTransferVisualizer:
             barmode="group",
             title="Balance Per Month",
             xaxis_title="[Date]",
-            yaxis_title=f"Average Balance Per Month [{CURRENCY_SYMBOL}]",
+            yaxis_title=f"Balance Relative to Dataset Start [{CURRENCY_SYMBOL}]",
         )
 
         return fig
@@ -322,7 +316,7 @@ class BankTransferVisualizer:
                 labels=amount_per_category.index,
                 text=custom_text,
                 textinfo="percent",
-                hovertemplate=f"%{{label}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br>%{{text:.2f}} {CURRENCY_SYMBOL}/Month<extra></extra>",
+                hovertemplate=f"%{{label}} %{{percent}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br>%{{text:.2f}} {CURRENCY_SYMBOL}/Month<extra></extra>",
             )
         )
         fig.update_traces(
@@ -333,4 +327,31 @@ class BankTransferVisualizer:
             )
         )
         fig.update_layout(title="Payments per Category")
+        return fig
+
+    def plot_cateogory_variance(self):
+        if self._dataframe_cache is None:
+            return go.Figure()
+
+        fig = go.Figure()
+
+        for category in self._dataframe_cache[DataColumns.CATEGORY].unique():
+
+            mask = self._dataframe_cache[DataColumns.CATEGORY] == category
+            curr_df = self._dataframe_cache[mask]
+
+            fig.add_trace(
+                go.Box(
+                    name=category,
+                    y=curr_df[DataColumns.AMOUNT],
+                    marker_color=self.category_to_color_map[category],
+                ),
+            )
+
+        fig.update_layout(
+            title="Cateogry Variance",
+            xaxis_title="Categories",
+            yaxis_title="Distribution",
+            showlegend=True,
+        )
         return fig

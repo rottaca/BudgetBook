@@ -3,6 +3,7 @@ import io
 import os.path
 import sys
 from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, no_update
@@ -72,6 +73,14 @@ def generate_tabs(manager: BankTransferVisualizer):
                             )
                         ),
                     ]
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dcc.Graph(
+                            id="category_variance",
+                            figure=manager.plot_cateogory_variance(),
+                        )
+                    )
                 ),
             ]
         ),
@@ -306,7 +315,10 @@ def parse_uploaded_csv(contents, filename):
 
         manager.clear_transfers()
         manager.add_transfers(csv_parser.to_dated_bank_transfers())
-        manager.set_analysis_interval(default_start_date, default_end_date)
+        manager.set_analysis_interval(
+            csv_parser._csv_data[DataColumns.DATE].min(),
+            csv_parser._csv_data[DataColumns.DATE].max() + relativedelta(days=1),
+        )
 
 
 @app.callback(
@@ -369,7 +381,8 @@ def update_output(start_date, end_date, n_clicks, contents, filename):
             if manager.dataset_is_valid():
                 manager.set_analysis_interval(
                     datetime.strptime(start_date, "%Y-%m-%d").date(),
-                    datetime.strptime(end_date, "%Y-%m-%d").date(),
+                    datetime.strptime(end_date, "%Y-%m-%d").date()
+                    + relativedelta(days=1),
                 )
                 return (
                     generate_tabs(manager),
