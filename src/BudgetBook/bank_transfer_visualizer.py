@@ -1,6 +1,7 @@
 import datetime
 from typing import List
 import numpy as np
+from dateutil import relativedelta
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -10,7 +11,7 @@ from BudgetBook.regular_bank_transfer import RegularBankTransfer
 from BudgetBook.config_parser import (
     ConfigParser,
     DataColumns,
-    DATA_COLUMN_TO_DISPLAY_NMAE,
+    DATA_COLUMN_TO_DISPLAY_NAME,
 )
 from BudgetBook.helper import COLORMAP, CURRENCY_SYMBOL
 
@@ -43,7 +44,7 @@ class BankTransferVisualizer:
         self._to_date = to_date
         self._to_dataframe()
 
-        if self._dataframe_cache is not None:
+        if self.dataset_is_valid():
             self.category_to_color_map = {
                 c: COLORMAP[idx]
                 for idx, c in enumerate(
@@ -88,6 +89,7 @@ class BankTransferVisualizer:
 
         self._dataframe_cache.set_index(DataColumns.DATE, inplace=True)
         self._dataframe_cache.index = pd.DatetimeIndex(self._dataframe_cache.index)
+        self._dataframe_cache.sort_index(inplace=True)
 
         self._dataframe_cache["date_without_day"] = [
             datetime.date(year=d.year, month=d.month, day=1)
@@ -96,7 +98,7 @@ class BankTransferVisualizer:
 
     def plot_statement_dataframe(self):
 
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return pd.DataFrame()
 
         df = self._dataframe_cache.reset_index()
@@ -111,7 +113,7 @@ class BankTransferVisualizer:
         ]
         df[DataColumns.DATE] = df[DataColumns.DATE].dt.strftime("%Y-%m-%d")
 
-        df = df.rename(columns=DATA_COLUMN_TO_DISPLAY_NMAE)
+        df = df.rename(columns=DATA_COLUMN_TO_DISPLAY_NAME)
 
         return df
 
@@ -119,7 +121,7 @@ class BankTransferVisualizer:
         fig = go.Figure()
 
         sum_per_month = (
-            amount.set_axis(df[DataColumns.DATE]).groupby(by=pd.Grouper(freq="M")).sum()
+            amount.groupby(by=pd.Grouper(freq="M")).sum()
         )
         dates = [
             datetime.date(year=d.year, month=d.month, day=1)
@@ -136,17 +138,6 @@ class BankTransferVisualizer:
                 hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{x}}<extra></extra>",
             )
         )
-        # for date, sum in sum_per_month.iteritems():
-        #     d = date.date()
-        #     d = datetime.date(year=d.year, month=d.month, day=1)
-        #     fig.add_annotation(
-        #         x=d,
-        #         y=sum,
-        #         text=f"{sum:.2f} {CURRENCY_SYMBOL}",
-        #         yref="y",
-        #         # ayref="y",
-        #         ay=50 if sum < 0 else -50,
-        #     )
 
         for category in df[DataColumns.CATEGORY].unique():
             mask = df[DataColumns.CATEGORY] == category
@@ -158,8 +149,8 @@ class BankTransferVisualizer:
                     x=curr_df["date_without_day"],
                     y=curr_amount,
                     text=[
-                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
-                        for _, d in curr_df.iterrows()
+                        f"{date:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
+                        for date, d in curr_df.iterrows()
                     ],
                     marker_color=self.category_to_color_map[category],
                     hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
@@ -176,13 +167,10 @@ class BankTransferVisualizer:
         return fig
 
     def plot_payments_per_month(self):
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        df = self._get_data_without_internal_transfers()
 
         df = df[df[DataColumns.AMOUNT] < 0]
         abs_amount = df[DataColumns.AMOUNT].abs()
@@ -196,13 +184,10 @@ class BankTransferVisualizer:
 
     def plot_internal_transfers_per_month(self):
 
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        df = self._get_internal_transfers()
 
         return self._plot_stacked_by_category_per_month(
             df,
@@ -212,13 +197,10 @@ class BankTransferVisualizer:
         )
 
     def plot_income_per_month(self):
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        df = self._get_data_without_internal_transfers()
         df = df[df[DataColumns.AMOUNT] > 0]
 
         return self._plot_stacked_by_category_per_month(
@@ -230,16 +212,10 @@ class BankTransferVisualizer:
 
     def plot_balance_per_month(self):
 
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
-            internal_transfer_categories
-        )
-        df = self._dataframe_cache[mask]
-
-        average_balance_per_month = df[DataColumns.AMOUNT].cumsum()
+        average_balance_per_month = self._dataframe_cache[DataColumns.AMOUNT].cumsum()
 
         fig = go.Figure()
         fig.add_trace(
@@ -261,14 +237,10 @@ class BankTransferVisualizer:
 
     def plot_transfers_per_month(self):
 
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
-            internal_transfer_categories
-        )
-        df = self._dataframe_cache[mask]
+        df = self._get_data_without_internal_transfers()
 
         df = df.groupby(["date_without_day", DataColumns.CATEGORY]).sum().reset_index()
 
@@ -294,27 +266,38 @@ class BankTransferVisualizer:
         )
         return fig
 
+    def _get_data_without_internal_transfers(self):
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[~mask]
+        return df
+
+    def _get_internal_transfers(self):
+        internal_transfer_categories = self._config.get_internal_transfer_categories()
+        mask = self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[mask]
+        return df
+
     def plot_pie_chart_per_cateogry(self):
 
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
-        grouped_per_category = self._dataframe_cache[
-            self._dataframe_cache[DataColumns.AMOUNT] < 0
-        ].groupby(by=DataColumns.CATEGORY)
-        amount_per_category = grouped_per_category[DataColumns.AMOUNT].sum().abs()
+        amount_per_category = self._get_abs_payment_amount_per_category()
+        total_months = self._total_months_in_dataset()
 
-        total_time = (
-            self._dataframe_cache.index.max() - self._dataframe_cache.index.min()
-        )
-        custom_text = [30 * v / total_time.days for v in amount_per_category]
-
+        average_payment_per_month = [v / total_months for v in amount_per_category]
+        
         fig = go.Figure()
         fig.add_trace(
             go.Pie(
                 values=amount_per_category,
                 labels=amount_per_category.index,
-                text=custom_text,
+                text=average_payment_per_month,
                 textinfo="percent",
                 hovertemplate=f"%{{label}} %{{percent}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br>%{{text:.2f}} {CURRENCY_SYMBOL}/Month<extra></extra>",
             )
@@ -329,8 +312,20 @@ class BankTransferVisualizer:
         fig.update_layout(title="Payments per Category")
         return fig
 
+    def _total_months_in_dataset(self):
+        total_time_delta = relativedelta.relativedelta(self._dataframe_cache.index.max().date(), self._dataframe_cache.index.min().date())
+        total_months = total_time_delta.years*12 + total_time_delta.months + (1 if total_time_delta.days > 15 else 0)
+        return total_months
+
+    def _get_abs_payment_amount_per_category(self):
+        grouped_per_category = self._dataframe_cache[
+            self._dataframe_cache[DataColumns.AMOUNT] < 0
+        ].groupby(by=DataColumns.CATEGORY)
+        amount_per_category = grouped_per_category[DataColumns.AMOUNT].sum().abs()
+        return amount_per_category
+
     def plot_cateogory_variance(self):
-        if self._dataframe_cache is None:
+        if not self.dataset_is_valid():
             return go.Figure()
 
         fig = go.Figure()
@@ -345,6 +340,7 @@ class BankTransferVisualizer:
                     name=category,
                     y=curr_df[DataColumns.AMOUNT],
                     marker_color=self.category_to_color_map[category],
+                    #boxpoints=False,
                 ),
             )
 

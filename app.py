@@ -43,7 +43,7 @@ default_end_date = date(year=2022, month=5, day=1)
 
 config = ConfigParser("configuration.yaml")
 csv_parser = AccountStatementCsvParser(
-    r"D:\Benutzer\Andreas\Downloads\Umsaetze_2022.05.01.csv",
+    r"C:\Users\Andreas Rottach\Google Drive\Umsaetze_2022.05.01.csv",
     config,
 )
 scheduled_transfers = csv_parser.to_dated_bank_transfers()
@@ -106,17 +106,17 @@ def generate_tabs(manager: BankTransferVisualizer):
                 dcc.Graph(
                     id="plot_income_per_month",
                     figure=manager.plot_income_per_month(),
-                    style={"height": "45vh"},
+                    style={"height": "600px"},
                 ),
                 dcc.Graph(
                     id="plot_payments_per_month",
                     figure=manager.plot_payments_per_month(),
-                    style={"height": "60vh"},
+                    style={"height": "600px"},
                 ),
                 dcc.Graph(
                     id="plot_internal_transfers_per_month",
                     figure=manager.plot_internal_transfers_per_month(),
-                    style={"height": "60vh"},
+                    style={"height": "600px"},
                 ),
             ]
         ),

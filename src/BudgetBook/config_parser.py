@@ -27,7 +27,7 @@ class DataColumns:
     CATEGORY = "category"
 
 
-DATA_COLUMN_TO_DISPLAY_NMAE = {
+DATA_COLUMN_TO_DISPLAY_NAME = {
     DataColumns.PAYMENT_PARTY: "Payment Party",
     DataColumns.AMOUNT: f"Amount [{CURRENCY_SYMBOL}]",
     DataColumns.TYPE_OF_TRANSFER: "Type Of Transfer",
