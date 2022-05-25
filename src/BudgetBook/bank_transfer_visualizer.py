@@ -118,9 +118,7 @@ class BankTransferVisualizer:
     def _plot_stacked_by_category_per_month(self, df, amount, title, yaxis_title):
         fig = go.Figure()
 
-        sum_per_month = (
-            amount.set_axis(df[DataColumns.DATE]).groupby(by=pd.Grouper(freq="M")).sum()
-        )
+        sum_per_month = amount.groupby(by=pd.Grouper(freq="M")).sum()
         dates = [
             datetime.date(year=d.year, month=d.month, day=1)
             for d in sum_per_month.index
@@ -136,17 +134,6 @@ class BankTransferVisualizer:
                 hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{x}}<extra></extra>",
             )
         )
-        # for date, sum in sum_per_month.iteritems():
-        #     d = date.date()
-        #     d = datetime.date(year=d.year, month=d.month, day=1)
-        #     fig.add_annotation(
-        #         x=d,
-        #         y=sum,
-        #         text=f"{sum:.2f} {CURRENCY_SYMBOL}",
-        #         yref="y",
-        #         # ayref="y",
-        #         ay=50 if sum < 0 else -50,
-        #     )
 
         for category in df[DataColumns.CATEGORY].unique():
             mask = df[DataColumns.CATEGORY] == category
@@ -158,8 +145,8 @@ class BankTransferVisualizer:
                     x=curr_df["date_without_day"],
                     y=curr_amount,
                     text=[
-                        f"{d[DataColumns.DATE]:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
-                        for _, d in curr_df.iterrows()
+                        f"{date:%d.%m.%Y}<br>{d[DataColumns.PAYMENT_PARTY][:40]}"
+                        for date, d in curr_df.iterrows()
                     ],
                     marker_color=self.category_to_color_map[category],
                     hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
@@ -179,10 +166,11 @@ class BankTransferVisualizer:
         if self._dataframe_cache is None:
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
         internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[mask]
 
         df = df[df[DataColumns.AMOUNT] < 0]
         abs_amount = df[DataColumns.AMOUNT].abs()
@@ -199,10 +187,11 @@ class BankTransferVisualizer:
         if self._dataframe_cache is None:
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
         internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        mask = self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[mask]
 
         return self._plot_stacked_by_category_per_month(
             df,
@@ -215,10 +204,11 @@ class BankTransferVisualizer:
         if self._dataframe_cache is None:
             return go.Figure()
 
-        df = self._dataframe_cache.reset_index()
         internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~df[DataColumns.CATEGORY].isin(internal_transfer_categories)
-        df = df[mask]
+        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
+            internal_transfer_categories
+        )
+        df = self._dataframe_cache[mask]
         df = df[df[DataColumns.AMOUNT] > 0]
 
         return self._plot_stacked_by_category_per_month(
@@ -237,8 +227,7 @@ class BankTransferVisualizer:
         mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
             internal_transfer_categories
         )
-        df = self._dataframe_cache[mask]
-
+        df = self._dataframe_cache[mask].sort_index()
         average_balance_per_month = df[DataColumns.AMOUNT].cumsum()
 
         fig = go.Figure()
@@ -264,13 +253,11 @@ class BankTransferVisualizer:
         if self._dataframe_cache is None:
             return go.Figure()
 
-        internal_transfer_categories = self._config.get_internal_transfer_categories()
-        mask = ~self._dataframe_cache[DataColumns.CATEGORY].isin(
-            internal_transfer_categories
+        df = (
+            self._dataframe_cache.groupby(["date_without_day", DataColumns.CATEGORY])
+            .sum()
+            .reset_index()
         )
-        df = self._dataframe_cache[mask]
-
-        df = df.groupby(["date_without_day", DataColumns.CATEGORY]).sum().reset_index()
 
         fig = go.Figure()
 
@@ -316,7 +303,9 @@ class BankTransferVisualizer:
                 labels=amount_per_category.index,
                 text=custom_text,
                 textinfo="percent",
-                hovertemplate=f"%{{label}} %{{percent}}<br>%{{value:.2f}} {CURRENCY_SYMBOL}<br>%{{text:.2f}} {CURRENCY_SYMBOL}/Month<extra></extra>",
+                hovertemplate=f"%{{label}} (%{{percent}})<br>"
+                f"∅ %{{text:.2f}} {CURRENCY_SYMBOL}/Month<br>"
+                f"Total: %{{value:.2f}} {CURRENCY_SYMBOL}<extra></extra>",
             )
         )
         fig.update_traces(
@@ -335,10 +324,16 @@ class BankTransferVisualizer:
 
         fig = go.Figure()
 
-        for category in self._dataframe_cache[DataColumns.CATEGORY].unique():
+        df = (
+            self._dataframe_cache.groupby(["date_without_day", DataColumns.CATEGORY])
+            .sum()
+            .reset_index()
+        )
 
-            mask = self._dataframe_cache[DataColumns.CATEGORY] == category
-            curr_df = self._dataframe_cache[mask]
+        for category in df[DataColumns.CATEGORY].unique():
+
+            mask = df[DataColumns.CATEGORY] == category
+            curr_df = df[mask]
 
             fig.add_trace(
                 go.Box(
@@ -349,9 +344,9 @@ class BankTransferVisualizer:
             )
 
         fig.update_layout(
-            title="Cateogry Variance",
+            title="Variance per Cateogry per Month",
             xaxis_title="Categories",
-            yaxis_title="Distribution",
+            yaxis_title=f"Distribution per Month [{CURRENCY_SYMBOL}]",
             showlegend=True,
         )
         return fig
