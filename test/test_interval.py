@@ -11,13 +11,13 @@ pd.options.plotting.backend = "plotly"
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.append(SRC_DIR)
 
-from BudgetBook.bank_transfer_visualizer import BankTransferVisualizer
-from BudgetBook.dated_bank_transfer import DatedBankTransfer
+from BudgetBook.transaction_visualizer import TransactionVisualizer
+from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.helper import Category
-from BudgetBook.bank_transfer_interval import BankTransferInterval
+from BudgetBook.transaction_interval import TransactionInterval
 from BudgetBook.regular_event import RegularEvent
-from BudgetBook.regular_bank_transfer import RegularBankTransfer
-from BudgetBook.regular_bank_transfer_builder import RegularBankTransferBuilder
+from BudgetBook.regular_transaction import RegularTransaction
+from BudgetBook.regular_transaction_builder import RegularTransactionBuilder
 
 
 def year(year: int) -> date:
@@ -26,7 +26,7 @@ def year(year: int) -> date:
 
 def test_interval_iteration():
     interval = RegularEvent(
-        first_occurence=year(2022), interval_size=BankTransferInterval.monthly()
+        first_occurence=year(2022), interval_size=TransactionInterval.monthly()
     )
 
     generated_intervals = [
@@ -41,13 +41,13 @@ def test_interval_iteration():
     )
 
 
-def test_Regular_transfer():
-    Regular_payment = RegularBankTransfer(
+def test_regular_transaction():
+    Regular_payment = RegularTransaction(
         "MyPayment",
         Category.UNKNOWN_PAYMENT,
         100.0,
         RegularEvent(
-            first_occurence=year(2022), interval_size=BankTransferInterval.monthly()
+            first_occurence=year(2022), interval_size=TransactionInterval.monthly()
         ),
         "no desc",
     )
@@ -59,7 +59,7 @@ def test_Regular_transfer():
         )
     ]
     expected_intervals = [
-        DatedBankTransfer(
+        DatedTransaction(
             "test",
             "no desc",
             Category.UNKNOWN_PAYMENT,
@@ -70,7 +70,7 @@ def test_Regular_transfer():
     ]
     expected_intervals.extend(
         [
-            DatedBankTransfer(
+            DatedTransaction(
                 "test",
                 "no desc",
                 Category.UNKNOWN_PAYMENT,
@@ -89,47 +89,47 @@ def test_Regular_transfer():
 
 
 def test_Regular_payment_builder():
-    builder = RegularBankTransferBuilder()
+    builder = RegularTransactionBuilder()
     builder.set_first_ocurrence(2022)
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
     builder.set_category(Category.UNKNOWN_PAYMENT)
-    builder.schedule_bank_transfer("MyPayment1", -100.0)
+    builder.schedule_bank_transaction("MyPayment1", -100.0)
     builder.set_interval(months=2)
     builder.set_category(Category.SALERY)
-    builder.schedule_bank_transfer("MySalery", 1000.0)
+    builder.schedule_bank_transaction("MySalery", 1000.0)
 
-    scheduled_transfers = builder.get_scheduled_transfers()
+    scheduled_transactions = builder.get_scheduled_transactions()
 
-    assert len(scheduled_transfers) == 2
-    assert scheduled_transfers[0].get_bank_transfer_amount() == -100.0
-    assert scheduled_transfers[0].get_name() == "MyPayment1"
-    assert scheduled_transfers[1].get_bank_transfer_amount() == 1000.0
-    assert scheduled_transfers[1].get_name() == "MySalery"
+    assert len(scheduled_transactions) == 2
+    assert scheduled_transactions[0].amount == -100.0
+    assert scheduled_transactions[0].name == "MyPayment1"
+    assert scheduled_transactions[1].amount == 1000.0
+    assert scheduled_transactions[1].name == "MySalery"
 
 
-def test_bank_transfer_visualizer():
-    builder = RegularBankTransferBuilder()
+def test_bank_transaction_visualizer():
+    builder = RegularTransactionBuilder()
     builder.set_first_ocurrence(2022)
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
     builder.set_category(Category.UNKNOWN_PAYMENT)
-    builder.schedule_bank_transfer("MyPayment1", -100.0)
+    builder.schedule_bank_transaction("MyPayment1", -100.0)
     builder.set_interval(months=2)
     builder.set_category(Category.SALERY)
-    builder.schedule_bank_transfer("MySalery", 1000.0)
+    builder.schedule_bank_transaction("MySalery", 1000.0)
 
-    scheduled_transfers = builder.get_scheduled_transfers()
+    scheduled_transactions = builder.get_scheduled_transactions()
 
-    visualzier = BankTransferVisualizer()
-    visualzier.add_transfers(scheduled_transfers)
+    visualzier = TransactionVisualizer()
+    visualzier.add_transactions(scheduled_transactions)
 
     visualzier.set_analysis_interval(from_date=year(2022), to_date=year(2023))
 
 
 def test_random_data_plots():
 
-    builder = RegularBankTransferBuilder()
+    builder = RegularTransactionBuilder()
     builder.set_first_ocurrence(2022)
     builder.set_last_ocurrence(2023)
     for i in range(10):
@@ -141,12 +141,12 @@ def test_random_data_plots():
         )
         builder.set_category(cat)
         builder.set_interval(0, random.randint(1, 5), 0)
-        builder.schedule_bank_transfer(f"dummy {i}", amount)
+        builder.schedule_bank_transaction(f"dummy {i}", amount)
 
-    scheduled_transfers = builder.get_scheduled_transfers()
+    scheduled_transactions = builder.get_scheduled_transactions()
 
-    manager = BankTransferVisualizer()
-    manager.add_transfers(scheduled_transfers)
+    manager = TransactionVisualizer()
+    manager.add_transactions(scheduled_transactions)
     manager.set_analysis_interval(year(2022), year(2023))
 
     df = manager._to_dataframe()

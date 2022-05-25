@@ -1,11 +1,13 @@
 from datetime import datetime
 import numpy as np
 import pandas as pd
+import Levenshtein
+from sklearn.cluster import dbscan
 from plotly import graph_objects as go
 
 from BudgetBook.category_parser import CategoryParser
 from BudgetBook.config_parser import DataColumns, ConfigParser
-from BudgetBook.dated_bank_transfer import DatedBankTransfer
+from BudgetBook.dated_transaction import DatedTransaction
 
 
 class AccountStatementCsvParser:
@@ -44,12 +46,13 @@ class AccountStatementCsvParser:
             self._csv_data[DataColumns.DATE], format=self._config.get_csv_date_format()
         )
 
-    def to_dated_bank_transfers(self):
-        self.to_regular_bank_transfers()
-        scheduled_transfers = []
+    def to_dated_transactions(self):
+        self.to_regular_transactions()
+
+        scheduled_transactions = []
         for _, row in self._csv_data.iterrows():
-            scheduled_transfers.append(
-                DatedBankTransfer(
+            scheduled_transactions.append(
+                DatedTransaction(
                     row[DataColumns.PAYMENT_PARTY],
                     row[DataColumns.DATE].date(),
                     row[DataColumns.AMOUNT],
@@ -58,46 +61,77 @@ class AccountStatementCsvParser:
                 )
             )
 
-        return scheduled_transfers
+        return scheduled_transactions
 
-    
-    def to_regular_bank_transfers(self):
-        import Levenshtein 
-        from sklearn.cluster import dbscan
+    def to_regular_transactions(self):
+
         distances = []
 
         payment_partys = self._csv_data[DataColumns.PAYMENT_PARTY].unique()
-        def lev_metric(x, y):
-            i, j = int(x[0]), int(y[0])     # extract indices
-            return Levenshtein.distance(payment_partys[i], payment_partys[j])
 
-        X = np.arange(len(payment_partys)).reshape(-1, 1)
-        _, same_party_label = dbscan(X, metric=lev_metric, eps=3, min_samples=2)
+        same_party_label = AccountStatementCsvParser.group_by_similarity(
+            payment_partys, eps=3
+        )
 
-        grouped_payment_parties = [payment_partys[same_party_label==l].tolist() for l in np.unique(same_party_label) if l >= 0]
-        grouped_payment_parties.extend([p] for p in payment_partys[same_party_label==-1])
+        grouped_payment_parties = [
+            payment_partys[same_party_label == l].tolist()
+            for l in np.unique(same_party_label)
+            if l >= 0
+        ]
+        grouped_payment_parties.extend(
+            [p] for p in payment_partys[same_party_label == -1]
+        )
+
+        grouped_data = {}
 
         for curr_payment_partys in grouped_payment_parties:
-            df_same_group = self._csv_data[self._csv_data[DataColumns.PAYMENT_PARTY].isin(curr_payment_partys)]
-            
+            df_same_group = self._csv_data[
+                self._csv_data[DataColumns.PAYMENT_PARTY].isin(curr_payment_partys)
+            ]
+
             print("Payment parties:", curr_payment_partys)
+            grouped_data[tuple(curr_payment_partys)] = []
 
             desc = df_same_group[DataColumns.DESCRIPTION]
-            def lev_metric(x, y):
-                i, j = int(x[0]), int(y[0])     # extract indices
-                return Levenshtein.distance(desc.iloc[i], desc.iloc[j])
 
-            X = np.arange(len(desc)).reshape(-1, 1)
-            _, labels = dbscan(X, metric=lev_metric, eps=35, min_samples=2)
+            labels = AccountStatementCsvParser.group_by_similarity(
+                [d[:40] for d in desc], eps=5
+            )
             for l in pd.Series(labels).unique():
+                data_per_group = df_same_group[labels == l][
+                    [DataColumns.AMOUNT, DataColumns.DATE, DataColumns.DESCRIPTION]
+                ]
+
                 if l == -1:
                     print("No cluster")
+                    grouped_data[tuple(curr_payment_partys)].extend(
+                        [[d] for d in data_per_group]
+                    )
                 else:
                     print("Label", l)
-                print(df_same_group[labels == l][[DataColumns.AMOUNT, DataColumns.DATE, DataColumns.DESCRIPTION]])
+                    grouped_data[tuple(curr_payment_partys)].append(data_per_group)
 
-            
+                print(data_per_group)
 
-            
+    @staticmethod
+    def gen_lev_distance_for(series: pd.Series):
+        def lev_metric(x, y):
+            i, j = int(x[0]), int(y[0])  # extract indices
+            if isinstance(series, pd.Series):
+                return Levenshtein.distance(series.iloc[i], series.iloc[j])
+            else:
+                return Levenshtein.distance(series[i], series[j])
 
+        return lev_metric
 
+    @staticmethod
+    def group_by_similarity(data_series, eps):
+        X = np.arange(len(data_series)).reshape(-1, 1)
+        _, labels = dbscan(
+            X,
+            metric=AccountStatementCsvParser.gen_lev_distance_for(data_series),
+            eps=eps,
+            min_samples=2,
+        )
+
+        return labels

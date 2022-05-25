@@ -15,7 +15,7 @@ SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "src"))
 sys.path.append(SRC_DIR)
 
 from BudgetBook.account_statement_parser import AccountStatementCsvParser
-from BudgetBook.bank_transfer_visualizer import BankTransferVisualizer
+from BudgetBook.transaction_visualizer import TransactionVisualizer
 from BudgetBook.config_parser import ConfigParser, DataColumns
 
 
@@ -36,7 +36,7 @@ def year(year: int) -> date:
 #     builder.set_interval(0, random.randint(1, 5), 0)
 #     builder.schedule_bank_transfer(f"dummy {i}", amount)
 
-# scheduled_transfers = builder.get_scheduled_transfers()
+# scheduled_transactions = builder.get_scheduled_transactions()
 
 default_start_date = date(year=2021, month=5, day=1)
 default_end_date = date(year=2022, month=5, day=1)
@@ -46,83 +46,30 @@ csv_parser = AccountStatementCsvParser(
     r"C:\Users\Andreas Rottach\Google Drive\Umsaetze_2022.05.01.csv",
     config,
 )
-scheduled_transfers = csv_parser.to_dated_bank_transfers()
+scheduled_transactions = csv_parser.to_dated_transactions()
 
-manager = BankTransferVisualizer(config)
-manager.add_transfers(scheduled_transfers)
+global_transaction_visualizer = TransactionVisualizer(config)
+global_transaction_visualizer.add_transactions(scheduled_transactions)
+global_transaction_visualizer.set_analysis_interval(
+    default_start_date, default_end_date
+)
 
-manager.set_analysis_interval(default_start_date, default_end_date)
+
+def generate_tabs(manager: TransactionVisualizer):
+    tab1_content = generate_overview_tab(manager)
+    tab2_content = generate_transactions_per_category_tab(manager)
+    tab3_content = generate_detailed_transactions_tab(manager)
+    tab4_content = generate_dataset_table_tab(manager)
+
+    return [
+        dbc.Tab(tab1_content, label="Overview"),
+        dbc.Tab(tab2_content, label="Transfers"),
+        dbc.Tab(tab3_content, label="Individual Transfers"),
+        dbc.Tab(tab4_content, label="Dataset"),
+    ]
 
 
-def generate_tabs(manager: BankTransferVisualizer):
-    tab1_content = dbc.Card(
-        dbc.CardBody(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            dcc.Graph(
-                                id="balance_per_month",
-                                figure=manager.plot_balance_per_month(),
-                            )
-                        ),
-                        dbc.Col(
-                            dcc.Graph(
-                                id="pie_chart_per_cateogry",
-                                figure=manager.plot_pie_chart_per_cateogry(),
-                            )
-                        ),
-                    ]
-                ),
-                dbc.Row(
-                    dbc.Col(
-                        dcc.Graph(
-                            id="category_variance",
-                            figure=manager.plot_cateogory_variance(),
-                        )
-                    )
-                ),
-            ]
-        ),
-        className="mt-3",
-    )
-
-    tab2_content = dbc.Card(
-        dbc.CardBody(
-            [
-                dcc.Graph(
-                    id="transfers_per_month",
-                    figure=manager.plot_transfers_per_month(),
-                    style={"height": "80vh"},
-                ),
-            ]
-        ),
-        className="mt-3",
-    )
-
-    tab3_content = dbc.Card(
-        dbc.CardBody(
-            [
-                dcc.Graph(
-                    id="plot_income_per_month",
-                    figure=manager.plot_income_per_month(),
-                    style={"height": "600px"},
-                ),
-                dcc.Graph(
-                    id="plot_payments_per_month",
-                    figure=manager.plot_payments_per_month(),
-                    style={"height": "600px"},
-                ),
-                dcc.Graph(
-                    id="plot_internal_transfers_per_month",
-                    figure=manager.plot_internal_transfers_per_month(),
-                    style={"height": "600px"},
-                ),
-            ]
-        ),
-        className="mt-3",
-    )
-
+def generate_dataset_table_tab(manager):
     df = manager.plot_statement_dataframe()
     columns = [
         {
@@ -160,125 +107,155 @@ def generate_tabs(manager: BankTransferVisualizer):
         className="mt-3",
     )
 
-    return [
-        dbc.Tab(tab1_content, label="Overview"),
-        dbc.Tab(tab2_content, label="Transfers"),
-        dbc.Tab(tab3_content, label="Individual Transfers"),
-        dbc.Tab(tab4_content, label="Dataset"),
-    ]
+    return tab4_content
 
 
-input_form = dbc.Form(
-    [
-        dbc.Row(
-            dbc.Col(
-                dcc.Upload(
-                    id="upload-data",
-                    children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
-                    style={
-                        "width": "100%",
-                        "height": "60px",
-                        "lineHeight": "60px",
-                        "borderWidth": "1px",
-                        "borderStyle": "dashed",
-                        "borderRadius": "5px",
-                        "textAlign": "center",
-                        "margin": "10px",
-                    },
-                )
-            )
-        ),
-        dbc.Row(
+def generate_detailed_transactions_tab(manager):
+    tab3_content = dbc.Card(
+        dbc.CardBody(
             [
-                dbc.Label("Date Range", html_for="date-picker-range", width=2),
-                dbc.Col(
-                    dcc.DatePickerRange(
-                        id="date-picker-range",
-                        initial_visible_month=datetime.now(),
-                        start_date=default_start_date,
-                        end_date=default_end_date,
-                        display_format="DD/MM/YYYY",
-                    ),
-                    width=8,
+                dcc.Graph(
+                    id="plot_income_per_month",
+                    figure=manager.plot_income_per_month(),
+                    style={"height": "600px"},
                 ),
-                dbc.Col(
-                    dbc.Button("Update", id="update-button"),
-                    width=2,
+                dcc.Graph(
+                    id="plot_payments_per_month",
+                    figure=manager.plot_payments_per_month(),
+                    style={"height": "600px"},
+                ),
+                dcc.Graph(
+                    id="plot_internal_transactions_per_month",
+                    figure=manager.plot_internal_transactions_per_month(),
+                    style={"height": "600px"},
                 ),
             ]
         ),
-        dbc.Row(
-            dbc.Col(
-                dbc.Label("", id="error", width=2),
-            )
-        ),
-    ],
-    class_name="m-2",
-)
+        className="mt-3",
+    )
 
-input_form = dbc.Form(
-    [
-        dbc.Row(
+    return tab3_content
+
+
+def generate_transactions_per_category_tab(manager):
+    tab_content = dbc.Card(
+        dbc.CardBody(
             [
-                dbc.Label(
-                    "Statement Dataset",
-                    html_for="upload-data",
-                    width=2,
+                dcc.Graph(
+                    id="transactions_per_month",
+                    figure=manager.plot_transactions_per_month(),
+                    style={"height": "80vh"},
                 ),
-                dbc.Col(
-                    dcc.Upload(
-                        id="upload-data",
-                        children=html.Div("Click to upload a csv file."),
-                        style={
-                            "width": "284px",
-                            "height": "60px",
-                            "lineHeight": "60px",
-                            "borderWidth": "1px",
-                            "borderStyle": "dashed",
-                            "borderRadius": "5px",
-                            "textAlign": "center",
-                        },
+            ]
+        ),
+        className="mt-3",
+    )
+    return tab_content
+
+
+def generate_overview_tab(manager):
+    tab_content = dbc.Card(
+        dbc.CardBody(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dcc.Graph(
+                                id="balance_per_month",
+                                figure=manager.plot_balance_per_month(),
+                            )
+                        ),
+                        dbc.Col(
+                            dcc.Graph(
+                                id="pie_chart_per_cateogry",
+                                figure=manager.plot_pie_chart_per_cateogry(),
+                            )
+                        ),
+                    ]
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dcc.Graph(
+                            id="category_variance",
+                            figure=manager.plot_cateogory_variance(),
+                        )
                     )
                 ),
-            ],
-            class_name="mb-3",
+            ]
         ),
-        dbc.Row(
-            [
-                dbc.Label(
-                    "Select a date range to evaluate",
-                    html_for="date-picker-range",
-                    width=2,
-                ),
-                dbc.Col(
-                    dcc.DatePickerRange(
-                        id="date-picker-range",
-                        initial_visible_month=datetime.now(),
-                        start_date=default_start_date,
-                        end_date=default_end_date,
-                        display_format="DD/MM/YYYY",
+        className="mt-3",
+    )
+
+    return tab_content
+
+
+def generate_input_form(default_start_date, default_end_date):
+    input_form = dbc.Form(
+        [
+            dbc.Row(
+                [
+                    dbc.Label(
+                        "Statement Dataset",
+                        html_for="upload-data",
+                        width=2,
                     ),
-                    width=8,
-                ),
-            ],
-            class_name="mb-3",
-        ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Button("Update", id="update-button"),
-                    width=2,
-                ),
-                dbc.Col(
-                    dbc.Label("", id="error"),
-                    width=8,
-                ),
-            ],
-            class_name="mb-3",
-        ),
-    ],
-    class_name="m-2",
-)
+                    dbc.Col(
+                        dcc.Upload(
+                            id="upload-data",
+                            children=html.Div("Click to upload a csv file."),
+                            style={
+                                "width": "284px",
+                                "height": "60px",
+                                "lineHeight": "60px",
+                                "borderWidth": "1px",
+                                "borderStyle": "dashed",
+                                "borderRadius": "5px",
+                                "textAlign": "center",
+                            },
+                        )
+                    ),
+                ],
+                class_name="mb-3",
+            ),
+            dbc.Row(
+                [
+                    dbc.Label(
+                        "Select a date range to evaluate",
+                        html_for="date-picker-range",
+                        width=2,
+                    ),
+                    dbc.Col(
+                        dcc.DatePickerRange(
+                            id="date-picker-range",
+                            initial_visible_month=datetime.now(),
+                            start_date=default_start_date,
+                            end_date=default_end_date,
+                            display_format="DD/MM/YYYY",
+                        ),
+                        width=8,
+                    ),
+                ],
+                class_name="mb-3",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button("Update", id="update-button"),
+                        width=2,
+                    ),
+                    dbc.Col(
+                        dbc.Label("", id="error"),
+                        width=8,
+                    ),
+                ],
+                class_name="mb-3",
+            ),
+        ],
+        class_name="m-2",
+    )
+
+    return input_form
+
 
 from flask import Flask
 
@@ -295,9 +272,13 @@ app.layout = dbc.Container(
             n_clicks=0,
         ),
         dbc.Collapse(
-            dbc.Card(dbc.CardBody(input_form)), id="collapse", class_name="pb-1"
+            dbc.Card(
+                dbc.CardBody(generate_input_form(default_start_date, default_end_date))
+            ),
+            id="collapse",
+            class_name="pb-1",
         ),
-        dbc.Tabs(generate_tabs(manager), id="tabs"),
+        dbc.Tabs(generate_tabs(global_transaction_visualizer), id="tabs"),
     ]
 )
 
@@ -313,9 +294,11 @@ def parse_uploaded_csv(contents, filename):
             config,
         )
 
-        manager.clear_transfers()
-        manager.add_transfers(csv_parser.to_dated_bank_transfers())
-        manager.set_analysis_interval(
+        global_transaction_visualizer.clear_transactions()
+        global_transaction_visualizer.add_transactions(
+            csv_parser.to_dated_transactions()
+        )
+        global_transaction_visualizer.set_analysis_interval(
             csv_parser._csv_data[DataColumns.DATE].min(),
             csv_parser._csv_data[DataColumns.DATE].max() + relativedelta(days=1),
         )
@@ -359,9 +342,16 @@ def update_output(start_date, end_date, n_clicks, contents, filename):
             error_msg = "Invalid file type selected. Only CSV is supported!"
         else:
             parse_uploaded_csv(contents, filename)
-            if manager.dataset_is_valid():
-                start_date = manager._dataframe_cache.index.min().strftime("%Y-%m-%d")
-                end_date = manager._dataframe_cache.index.max().strftime("%Y-%m-%d")
+            if global_transaction_visualizer.dataset_is_valid():
+                start_date = (
+                    global_transaction_visualizer.get_first_transaction_date_in_analysis_interval()
+                )
+                end_date = (
+                    global_transaction_visualizer.get_last_transaction_date_in_analysis_interval()
+                )
+
+                end_date = end_date.strftime("%Y-%m-%d")
+                start_date = start_date.strftime("%Y-%m-%d")
                 return (
                     dash.no_update,
                     start_date,
@@ -373,14 +363,14 @@ def update_output(start_date, end_date, n_clicks, contents, filename):
 
     elif ctx.triggered[0]["prop_id"] == "update-button.n_clicks":
         if start_date is not None and end_date is not None and start_date < end_date:
-            if manager.dataset_is_valid():
-                manager.set_analysis_interval(
+            if global_transaction_visualizer.dataset_is_valid():
+                global_transaction_visualizer.set_analysis_interval(
                     datetime.strptime(start_date, "%Y-%m-%d").date(),
                     datetime.strptime(end_date, "%Y-%m-%d").date()
                     + relativedelta(days=1),
                 )
                 return (
-                    generate_tabs(manager),
+                    generate_tabs(global_transaction_visualizer),
                     dash.no_update,
                     dash.no_update,
                     "Data updated!",

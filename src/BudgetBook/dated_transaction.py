@@ -5,7 +5,7 @@ from BudgetBook.config_parser import DataColumns
 from BudgetBook.helper import CURRENCY_SYMBOL
 
 
-class DatedBankTransfer:
+class DatedTransaction:
     def __init__(
         self,
         payment_party: str,

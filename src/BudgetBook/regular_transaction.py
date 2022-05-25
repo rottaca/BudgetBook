@@ -1,10 +1,10 @@
 import datetime
-from BudgetBook.dated_bank_transfer import DatedBankTransfer
+from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.helper import CURRENCY_SYMBOL
 from BudgetBook.regular_event import RegularEvent
 
 
-class RegularBankTransfer:
+class RegularTransaction:
     def __init__(
         self,
         payment_party: str,
@@ -29,9 +29,9 @@ class RegularBankTransfer:
 
     def iterate(
         self, from_date: datetime.date, up_to: datetime.date
-    ) -> DatedBankTransfer:
+    ) -> DatedTransaction:
         for current_date in self._frequency.iterate(from_date=from_date, up_to=up_to):
-            yield DatedBankTransfer(
+            yield DatedTransaction(
                 self._payment_party,
                 current_date,
                 self._amount,

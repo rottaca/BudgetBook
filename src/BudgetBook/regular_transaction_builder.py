@@ -2,19 +2,19 @@ import copy
 import datetime
 from typing import List
 from BudgetBook.helper import Category
-from BudgetBook.bank_transfer_interval import BankTransferInterval
+from BudgetBook.transaction_interval import TransactionInterval
 from BudgetBook.regular_event import RegularEvent
-from BudgetBook.regular_bank_transfer import RegularBankTransfer
+from BudgetBook.regular_transaction import RegularTransaction
 
 
-class RegularBankTransferBuilder:
+class RegularTransactionBuilder:
     def __init__(self) -> None:
         self._current_recurrence = RegularEvent(None, None, None)
-        self._scheduled_transfers = []
+        self._scheduled_transactions = []
         self._current_category = None
 
-    def get_scheduled_transfers(self) -> List[RegularBankTransfer]:
-        return self._scheduled_transfers
+    def get_scheduled_transactions(self) -> List[RegularTransaction]:
+        return self._scheduled_transactions
 
     def set_first_ocurrence(self, year: int) -> None:
         self._current_recurrence.set_first_occurence(
@@ -28,29 +28,29 @@ class RegularBankTransferBuilder:
 
     def set_interval(self, years: int = 0, months: int = 0, days: int = 0) -> None:
         self._current_recurrence.set_interval_size(
-            BankTransferInterval(years=years, months=months, days=days)
+            TransactionInterval(years=years, months=months, days=days)
         )
 
     def set_interval_monthly(self) -> None:
-        self._current_recurrence.set_interval_size(BankTransferInterval.monthly())
+        self._current_recurrence.set_interval_size(TransactionInterval.monthly())
 
     def set_interval_quaterly(self) -> None:
-        self._current_recurrence.set_interval_size(BankTransferInterval.quaterly())
+        self._current_recurrence.set_interval_size(TransactionInterval.quaterly())
 
     def set_interval_yearly(self) -> None:
-        self._current_recurrence.set_interval_size(BankTransferInterval.yearly())
+        self._current_recurrence.set_interval_size(TransactionInterval.yearly())
 
     def set_category(self, category: str) -> None:
         self._current_category = category
 
-    def schedule_bank_transfer(
+    def schedule_bank_transaction(
         self,
         payment_party: str,
         amount: float,
         desc: str = "",
     ):
-        self._scheduled_transfers.append(
-            RegularBankTransfer(
+        self._scheduled_transactions.append(
+            RegularTransaction(
                 payment_party,
                 copy.copy(self._current_recurrence),
                 amount,

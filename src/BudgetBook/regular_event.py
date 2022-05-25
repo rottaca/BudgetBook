@@ -1,13 +1,13 @@
 import datetime
 
-from BudgetBook.bank_transfer_interval import BankTransferInterval
+from BudgetBook.transaction_interval import TransactionInterval
 
 
 class RegularEvent:
     def __init__(
         self,
         first_occurence: datetime.date,
-        interval_size: BankTransferInterval,
+        interval_size: TransactionInterval,
         last_occurence: datetime.date = None,
     ) -> None:
         self._first_occurence = first_occurence
@@ -35,13 +35,13 @@ class RegularEvent:
     def get_last_occurence(self) -> datetime.date:
         return self._last_occurence
 
-    def get_interval_size(self) -> BankTransferInterval:
+    def get_interval_size(self) -> TransactionInterval:
         return self._interval_size
 
     def set_first_occurence(self, first_ocurrence: datetime.date):
         self._first_occurence = first_ocurrence
 
-    def set_interval_size(self, interval_size: BankTransferInterval):
+    def set_interval_size(self, interval_size: TransactionInterval):
         self._interval_size = interval_size
 
     def set_last_occurence(self, last_ocurrence: datetime.date):

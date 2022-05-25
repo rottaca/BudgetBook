@@ -50,7 +50,7 @@ class ConfigParser:
             ConfigKeywords.CSV_COLUMNS_TOPLEVEL
         ]
 
-    def get_internal_transfer_categories(self) -> list:
+    def get_internal_transaction_categories(self) -> list:
         return self._statement_parser[ConfigKeywords.CATEGORIES_TO_IGNORE]
 
     def get_csv_date_format(self) -> str:
