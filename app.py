@@ -349,12 +349,7 @@ def update_output(start_date, end_date, n_clicks, contents, filename):
     ctx = dash.callback_context
 
     if not ctx.triggered:
-        return (
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-        )
+        return dash.no_update
 
     error_msg = dash.no_update
 
