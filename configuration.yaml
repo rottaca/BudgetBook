@@ -17,27 +17,30 @@ category_mapping:
         payment_party: ["versicherung", "assuranc"]
     Mobility:
         or:
-            description: ["tank", "park", "garage", "autohaus", "autocenter"]
+            description: ["tankstelle",  "tanken", "parkhaus", "parkplatz", "garage", "autohaus", "autocenter", "waschanlage"]
             payment_party:
-                ["tank", "bundeskasse in weiden", "vergoelst", "shell", "aral"]
+                ["tank", "bundeskasse in weiden", "vergoelst", "shell", "aral", "pneuhage", "jet"]
     Household:
         payment_party: ["swu"]
+        description: ["entsorgungsbetriebe"]
     Multimedia/Internet:
         or:
-            description: ["spotify"]
+            description: ["spotify", "rundfunk"]
             payment_party:
-                ["vodafone", "klarmobil", "Rundfunk ARD, ZDF, DRadio"]
+                ["vodafone", "klarmobil", "congstar", "Rundfunk ARD, ZDF, DRadio"]
     Groceries:
         or:
-            description: ["takeaway.com", "lidl", "kfc", "ristorante"]
+            description: ["takeaway.com", "lidl", "kfc", "ristorante", "burgerkind", "mcdonalds"]
             payment_party:
                 [
                     "lidl",
+                    "edeka",
                     "rewe",
                     "finkbeiner",
                     "ecenter",
                     "drogerie",
                     "kaufland",
+                    "Netto Marken-Discoun"
                 ]
     Rent:
         description: ["miet"]
