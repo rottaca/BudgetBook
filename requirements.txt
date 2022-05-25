@@ -7,3 +7,5 @@ python-dateutil
 black
 pandas
 pyyaml
+python-Levenshtein
+sklearn
