@@ -18,7 +18,11 @@ sys.path.append(SRC_DIR)
 
 from BudgetBook.account_statement_parser import AccountStatementCsvParser
 from BudgetBook.transaction_visualizer import TransactionVisualizer
-from BudgetBook.config_parser import ConfigParser, DataColumns
+from BudgetBook.config_parser import (
+    DATA_COLUMN_TO_DISPLAY_NAME,
+    ConfigParser,
+    DataColumns,
+)
 from BudgetBook.regular_transaction_predictor import RegularTransactionPredictor
 
 
@@ -74,6 +78,16 @@ def generate_tabs(manager: TransactionVisualizer):
     ]
 
 
+def hex_to_rgb(value):
+    value = value.lstrip("#")
+    lv = len(value)
+    return tuple(int(value[i : i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+
+def rgb_to_gray(rgb):
+    return (rgb[0] + rgb[1] + rgb[2]) / 3
+
+
 def generate_dataset_table_tab(manager: TransactionVisualizer):
     df = manager.plot_statement_dataframe()
     columns = [
@@ -85,7 +99,20 @@ def generate_dataset_table_tab(manager: TransactionVisualizer):
         }
         for c in df.columns
     ]
+    id_amount_column = DATA_COLUMN_TO_DISPLAY_NAME[DataColumns.AMOUNT]
+    id_category_column = DATA_COLUMN_TO_DISPLAY_NAME[DataColumns.CATEGORY]
 
+    style_rules_for_categories = [
+        {
+            "if": {
+                "filter_query": f"{{{id_category_column}}} = '{category}'",
+                "column_id": id_category_column,
+            },
+            "backgroundColor": color,
+            "color": "white" if rgb_to_gray(hex_to_rgb(color)) < 128 else "black",
+        }
+        for category, color in manager.category_to_color_map.items()
+    ]
     tab4_content = dbc.Card(
         dbc.CardBody(
             [
@@ -100,12 +127,32 @@ def generate_dataset_table_tab(manager: TransactionVisualizer):
                     page_current=0,
                     page_size=20,
                     style_cell={
-                        "minWidth": "50px",
-                        "maxWidth": "200px",
                         "whiteSpace": "normal",
                         "height": "auto",
                         "textAlign": "left",
                     },
+                    style_table={
+                        "width": "100%",
+                    },
+                    style_data_conditional=[
+                        {
+                            "if": {
+                                "filter_query": f"{{{id_amount_column}}} < 0",
+                                "column_id": id_amount_column,
+                            },
+                            "backgroundColor": "tomato",
+                            "color": "white",
+                        },
+                        {
+                            "if": {
+                                "filter_query": f"{{{id_amount_column}}} > 0",
+                                "column_id": id_amount_column,
+                            },
+                            "backgroundColor": "green",
+                            "color": "white",
+                        },
+                        *style_rules_for_categories,
+                    ],
                 )
             ]
         ),
@@ -199,12 +246,31 @@ def generate_prediction_tab(manager: TransactionVisualizer):
     regular_transactions = predictor.to_regular_transactions(manager.get_transactions())
     df = pd.DataFrame.from_records([t.to_dict() for t in regular_transactions])
 
+    df.rename(columns=DATA_COLUMN_TO_DISPLAY_NAME, inplace=True)
+
     columns = [
         {
             "id": c,
             "name": c,
+            "type": "numeric",
+            "format": Format(precision=2, scheme=Scheme.fixed),
         }
         for c in df.columns
+    ]
+
+    id_amount_column = DATA_COLUMN_TO_DISPLAY_NAME[DataColumns.AMOUNT]
+    id_category_column = DATA_COLUMN_TO_DISPLAY_NAME[DataColumns.CATEGORY]
+
+    style_rules_for_categories = [
+        {
+            "if": {
+                "filter_query": f"{{{id_category_column}}} = '{category}'",
+                "column_id": id_category_column,
+            },
+            "backgroundColor": color,
+            "color": "white" if rgb_to_gray(hex_to_rgb(color)) < 128 else "black",
+        }
+        for category, color in manager.category_to_color_map.items()
     ]
 
     tab5_content = dbc.Card(
@@ -221,12 +287,32 @@ def generate_prediction_tab(manager: TransactionVisualizer):
                     page_current=0,
                     page_size=20,
                     style_cell={
-                        "minWidth": "50px",
-                        "maxWidth": "200px",
                         "whiteSpace": "normal",
                         "height": "auto",
                         "textAlign": "left",
                     },
+                    style_table={
+                        "width": "100%",
+                    },
+                    style_data_conditional=[
+                        {
+                            "if": {
+                                "filter_query": f"{{{id_amount_column}}} < 0",
+                                "column_id": id_amount_column,
+                            },
+                            "backgroundColor": "tomato",
+                            "color": "white",
+                        },
+                        {
+                            "if": {
+                                "filter_query": f"{{{id_amount_column}}} > 0",
+                                "column_id": id_amount_column,
+                            },
+                            "backgroundColor": "green",
+                            "color": "white",
+                        },
+                        *style_rules_for_categories,
+                    ],
                 )
             ]
         ),
