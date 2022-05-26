@@ -3,6 +3,7 @@ import io
 import os.path
 import sys
 from datetime import date, datetime
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 import dash_bootstrap_components as dbc
@@ -11,12 +12,14 @@ import dash
 from dash.dash_table.Format import Format, Scheme, Symbol
 from dash.dependencies import Input, Output, State
 
+
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "src"))
 sys.path.append(SRC_DIR)
 
 from BudgetBook.account_statement_parser import AccountStatementCsvParser
 from BudgetBook.transaction_visualizer import TransactionVisualizer
 from BudgetBook.config_parser import ConfigParser, DataColumns
+from BudgetBook.regular_transaction_predictor import RegularTransactionPredictor
 
 
 def year(year: int) -> date:
@@ -60,16 +63,18 @@ def generate_tabs(manager: TransactionVisualizer):
     tab2_content = generate_transactions_per_category_tab(manager)
     tab3_content = generate_detailed_transactions_tab(manager)
     tab4_content = generate_dataset_table_tab(manager)
+    tab5_content = generate_prediction_tab(manager)
 
     return [
         dbc.Tab(tab1_content, label="Overview"),
         dbc.Tab(tab2_content, label="Transfers"),
         dbc.Tab(tab3_content, label="Individual Transfers"),
         dbc.Tab(tab4_content, label="Dataset"),
+        dbc.Tab(tab5_content, label="Predictions"),
     ]
 
 
-def generate_dataset_table_tab(manager):
+def generate_dataset_table_tab(manager: TransactionVisualizer):
     df = manager.plot_statement_dataframe()
     columns = [
         {
@@ -110,7 +115,7 @@ def generate_dataset_table_tab(manager):
     return tab4_content
 
 
-def generate_detailed_transactions_tab(manager):
+def generate_detailed_transactions_tab(manager: TransactionVisualizer):
     tab3_content = dbc.Card(
         dbc.CardBody(
             [
@@ -137,7 +142,7 @@ def generate_detailed_transactions_tab(manager):
     return tab3_content
 
 
-def generate_transactions_per_category_tab(manager):
+def generate_transactions_per_category_tab(manager: TransactionVisualizer):
     tab_content = dbc.Card(
         dbc.CardBody(
             [
@@ -153,7 +158,7 @@ def generate_transactions_per_category_tab(manager):
     return tab_content
 
 
-def generate_overview_tab(manager):
+def generate_overview_tab(manager: TransactionVisualizer):
     tab_content = dbc.Card(
         dbc.CardBody(
             [
@@ -187,6 +192,48 @@ def generate_overview_tab(manager):
     )
 
     return tab_content
+
+
+def generate_prediction_tab(manager: TransactionVisualizer):
+    predictor = RegularTransactionPredictor(config)
+    regular_transactions = predictor.to_regular_transactions(manager.get_transactions())
+    df = pd.DataFrame.from_records([t.to_dict() for t in regular_transactions])
+
+    columns = [
+        {
+            "id": c,
+            "name": c,
+        }
+        for c in df.columns
+    ]
+
+    tab5_content = dbc.Card(
+        dbc.CardBody(
+            [
+                dash_table.DataTable(
+                    id="prediction-table",
+                    columns=columns,
+                    data=df.to_dict("records"),
+                    filter_action="native",
+                    sort_action="native",
+                    sort_mode="multi",
+                    page_action="native",
+                    page_current=0,
+                    page_size=20,
+                    style_cell={
+                        "minWidth": "50px",
+                        "maxWidth": "200px",
+                        "whiteSpace": "normal",
+                        "height": "auto",
+                        "textAlign": "left",
+                    },
+                )
+            ]
+        ),
+        className="mt-3",
+    )
+
+    return tab5_content
 
 
 def generate_input_form(default_start_date, default_end_date):

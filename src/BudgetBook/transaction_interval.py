@@ -1,5 +1,5 @@
 from dateutil.relativedelta import relativedelta
-
+import pandas as pd
 
 class TransactionInterval:
     def __init__(self, years: int = 0, months: int = 0, days: int = 0) -> None:
@@ -9,6 +9,10 @@ class TransactionInterval:
 
     def to_relative_delta(self) -> relativedelta:
         return self._interval
+
+    @staticmethod
+    def fromTimeDelta(delta: pd.Timedelta):
+        return TransactionInterval(days=delta.days)
 
     @staticmethod
     def monthly():

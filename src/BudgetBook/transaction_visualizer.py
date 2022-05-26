@@ -36,6 +36,9 @@ class TransactionVisualizer:
     def add_transactions(self, transactions: List[RegularTransaction]):
         self._scheduled_transactions.extend(transactions)
 
+    def get_transactions(self):
+        return self._scheduled_transactions
+
     def set_analysis_interval(self, from_date, to_date):
         self._from_date = from_date
         self._to_date = to_date
