@@ -2,6 +2,7 @@ import base64
 import io
 import os.path
 import sys
+import plotly
 from datetime import date, datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -127,7 +128,7 @@ def generate_dataset_table_tab(manager: TransactionVisualizer):
                     page_current=0,
                     page_size=20,
                     style_cell={
-                        "whiteSpace": "normal",
+                        "whiteSpace": "pre-line",
                         "height": "auto",
                         "textAlign": "left",
                     },
@@ -163,23 +164,32 @@ def generate_dataset_table_tab(manager: TransactionVisualizer):
 
 
 def generate_detailed_transactions_tab(manager: TransactionVisualizer):
+
+    fig = plotly.subplots.make_subplots(
+        rows=3,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+        subplot_titles=(
+            "Income Per Month",
+            "Payments Per Month",
+            "Internal Transfers Per Month",
+        ),
+    )
+
+    manager.plot_income_per_month(fig=fig, row=1, col=1)
+    manager.plot_payments_per_month(fig=fig, row=2, col=1)
+    manager.plot_internal_transactions_per_month(fig=fig, row=3, col=1)
+
+    fig.update_layout(legend=dict(yanchor="top", y=0.70, xanchor="left", x=1.01))
+
     tab3_content = dbc.Card(
         dbc.CardBody(
             [
                 dcc.Graph(
-                    id="plot_income_per_month",
-                    figure=manager.plot_income_per_month(),
-                    style={"height": "600px"},
-                ),
-                dcc.Graph(
-                    id="plot_payments_per_month",
-                    figure=manager.plot_payments_per_month(),
-                    style={"height": "600px"},
-                ),
-                dcc.Graph(
-                    id="plot_internal_transactions_per_month",
-                    figure=manager.plot_internal_transactions_per_month(),
-                    style={"height": "600px"},
+                    id="plot_details",
+                    figure=fig,
+                    style={"height": "1400px"},
                 ),
             ]
         ),
@@ -230,6 +240,7 @@ def generate_overview_tab(manager: TransactionVisualizer):
                         dcc.Graph(
                             id="category_variance",
                             figure=manager.plot_cateogory_variance(),
+                            style={"height": "900px"},
                         )
                     )
                 ),
@@ -287,7 +298,7 @@ def generate_prediction_tab(manager: TransactionVisualizer):
                     page_current=0,
                     page_size=20,
                     style_cell={
-                        "whiteSpace": "normal",
+                        "whiteSpace": "pre-line",
                         "height": "auto",
                         "textAlign": "left",
                     },
@@ -412,7 +423,8 @@ app.layout = dbc.Container(
             class_name="pb-1",
         ),
         dbc.Tabs(generate_tabs(global_transaction_visualizer), id="tabs"),
-    ]
+    ],
+    style={"width": "80vw", "min-width": "80vw"},
 )
 
 

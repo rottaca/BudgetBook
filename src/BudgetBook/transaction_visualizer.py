@@ -123,8 +123,11 @@ class TransactionVisualizer:
 
         return df
 
-    def _plot_stacked_by_category_per_month(self, df, amount, title, yaxis_title):
-        fig = go.Figure()
+    def _plot_stacked_by_category_per_month(
+        self, df, amount, title, yaxis_title, fig=None, row=None, col=None
+    ):
+        if fig is None:
+            fig = go.Figure()
 
         sum_per_month = amount.groupby(by=pd.Grouper(freq="M")).sum()
         dates = [
@@ -135,12 +138,16 @@ class TransactionVisualizer:
             go.Scatter(
                 x=dates,
                 y=sum_per_month.values,
-                name="Total Sum",
+                name=f"Total {title}",
                 mode="lines+markers",
                 marker_color="black",
                 line_dash="dash",
                 hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{x}}<extra></extra>",
-            )
+                legendgroup="total",
+                legendgrouptitle_text="Total per Month",
+            ),
+            row=row,
+            col=col,
         )
 
         for category in df[DataColumns.CATEGORY].unique():
@@ -158,19 +165,32 @@ class TransactionVisualizer:
                     ],
                     marker_color=self.category_to_color_map[category],
                     hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}<br>%{{text}}<extra>{category}</extra>",
+                    legendgroup=category,
+                    showlegend=False
+                    if len([t for t in fig.select_traces({"name": category})]) > 0
+                    else True,
                 ),
+                row=row,
+                col=col,
             )
 
         fig.update_layout(
             barmode="relative",
-            title=title,
-            xaxis_title="[Date]",
-            yaxis_title=yaxis_title,
-            showlegend=True,
+        )
+
+        fig.update_xaxes(
+            title_text="[Date]",
+            row=row,
+            col=col,
+        )
+        fig.update_yaxes(
+            title_text=yaxis_title,
+            row=row,
+            col=col,
         )
         return fig
 
-    def plot_payments_per_month(self):
+    def plot_payments_per_month(self, fig=None, row=None, col=None):
         if not self.dataset_is_valid():
             return go.Figure()
 
@@ -184,9 +204,12 @@ class TransactionVisualizer:
             abs_amount,
             title="Payments Per Month",
             yaxis_title=f"Payments Per Month [{CURRENCY_SYMBOL}]",
+            fig=fig,
+            row=row,
+            col=col,
         )
 
-    def plot_internal_transactions_per_month(self):
+    def plot_internal_transactions_per_month(self, fig=None, row=None, col=None):
 
         if not self.dataset_is_valid():
             return go.Figure()
@@ -198,9 +221,12 @@ class TransactionVisualizer:
             df[DataColumns.AMOUNT],
             title="Internal Transfers Per Month",
             yaxis_title=f"Internal Transfers Per Month [{CURRENCY_SYMBOL}]",
+            fig=fig,
+            row=row,
+            col=col,
         )
 
-    def plot_income_per_month(self):
+    def plot_income_per_month(self, fig=None, row=None, col=None):
         if not self.dataset_is_valid():
             return go.Figure()
 
@@ -212,6 +238,9 @@ class TransactionVisualizer:
             df[DataColumns.AMOUNT],
             title="Income Per Month",
             yaxis_title=f"Income Per Month [{CURRENCY_SYMBOL}]",
+            fig=fig,
+            row=row,
+            col=col,
         )
 
     def plot_balance_per_month(self):

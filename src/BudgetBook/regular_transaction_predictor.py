@@ -104,14 +104,13 @@ class RegularTransactionPredictor:
                 freqency = RegularEvent(
                     transaction_group[DataColumns.DATE].min(), interval
                 )
-
-                desc = f"Based on {len(transaction_group)} samples.\n"
-                desc += f"Removed {sum(~filter_mask)} outliers.\n"
+                desc = ""
                 desc += (
                     f"Stddev of interval is +/- {filtered_interval_std.days} days.\n"
                 )
-                desc += "The first one has the following description:\n"
-                desc += transaction_group[DataColumns.DESCRIPTION].iloc[0][:100]
+                desc += f"Based on {len(transaction_group)} samples with {sum(~filter_mask)} outliers.\n"
+                desc += "Last transaction description:\n"
+                desc += transaction_group[DataColumns.DESCRIPTION].iloc[-1][:100]
                 desc += "[...]"
                 transactions.append(
                     RegularTransaction(
