@@ -50,25 +50,32 @@ default_start_date = date(year=2021, month=5, day=1)
 default_end_date = date(year=2022, month=5, day=1)
 
 config = ConfigParser("configuration.yaml")
-csv_parser = AccountStatementCsvParser(
-    r"C:\Users\Andreas Rottach\Google Drive\Umsaetze_2022.05.01.csv",
-    config,
-)
-scheduled_transactions = csv_parser.to_dated_transactions()
+# csv_parser = AccountStatementCsvParser(
+#     r"C:\Users\Andreas Rottach\Google Drive\Umsaetze_2022.05.01.csv",
+#     config,
+# )
+# scheduled_transactions = csv_parser.to_dated_transactions()
 
-global_transaction_visualizer = TransactionVisualizer(config)
-global_transaction_visualizer.add_transactions(scheduled_transactions)
-global_transaction_visualizer.set_analysis_interval(
-    default_start_date, default_end_date
-)
+# global_transaction_visualizer = TransactionVisualizer(config)
+# global_transaction_visualizer.add_transactions(scheduled_transactions)
+# global_transaction_visualizer.set_analysis_interval(
+#     default_start_date, default_end_date
+# )
 
 
 def generate_tabs(manager: TransactionVisualizer):
-    tab1_content = generate_overview_tab(manager)
-    tab2_content = generate_transactions_per_category_tab(manager)
-    tab3_content = generate_detailed_transactions_tab(manager)
-    tab4_content = generate_dataset_table_tab(manager)
-    tab5_content = generate_prediction_tab(manager)
+    if manager is not None:
+        tab1_content = generate_overview_tab(manager)
+        tab2_content = generate_transactions_per_category_tab(manager)
+        tab3_content = generate_detailed_transactions_tab(manager)
+        tab4_content = generate_dataset_table_tab(manager)
+        tab5_content = generate_prediction_tab(manager)
+    else:
+        tab1_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
+        tab2_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
+        tab3_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
+        tab4_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
+        tab5_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
 
     return [
         dbc.Tab(tab1_content, label="Overview"),
@@ -339,24 +346,31 @@ def generate_input_form(default_start_date, default_end_date):
             dbc.Row(
                 [
                     dbc.Label(
-                        "Statement Dataset",
+                        "Upload your statement(s) for analysis (*.csv)",
                         html_for="upload-data",
-                        width=2,
+                        style={"font-weight": "bold"},
                     ),
                     dbc.Col(
                         dcc.Upload(
                             id="upload-data",
-                            children=html.Div("Click to upload a csv file."),
+                            children=html.Div(
+                                "Click or drag-and-drop to upload CSV files."
+                            ),
+                            multiple=True,
                             style={
-                                "width": "284px",
-                                "height": "60px",
-                                "lineHeight": "60px",
+                                "height": "50px",
+                                "lineHeight": "50px",
                                 "borderWidth": "1px",
                                 "borderStyle": "dashed",
                                 "borderRadius": "5px",
                                 "textAlign": "center",
                             },
-                        )
+                        ),
+                    ),
+                    dbc.Label(
+                        "",
+                        html_for="upload-data",
+                        id="file-uploaded-label",
                     ),
                 ],
                 class_name="mb-3",
@@ -364,9 +378,9 @@ def generate_input_form(default_start_date, default_end_date):
             dbc.Row(
                 [
                     dbc.Label(
-                        "Select a date range to evaluate",
+                        "Select the time interval you want to evaluate",
                         html_for="date-picker-range",
-                        width=2,
+                        style={"font-weight": "bold"},
                     ),
                     dbc.Col(
                         dcc.DatePickerRange(
@@ -376,88 +390,87 @@ def generate_input_form(default_start_date, default_end_date):
                             end_date=default_end_date,
                             display_format="DD/MM/YYYY",
                         ),
-                        width=8,
                     ),
                 ],
                 class_name="mb-3",
             ),
             dbc.Row(
-                [
-                    dbc.Col(
-                        dbc.Button("Update", id="update-button"),
-                        width=2,
-                    ),
-                    dbc.Col(
-                        dbc.Label("", id="error"),
-                        width=8,
-                    ),
-                ],
+                html.Div("", id="status", className="fade alert alert-danger hide"),
                 class_name="mb-3",
             ),
         ],
         class_name="m-2",
     )
 
-    return input_form
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(dbc.ModalTitle("Upload Dataset"), close_button=True),
+            dbc.ModalBody(input_form),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        "Update",
+                        id="update-button",
+                        className="ms-auto",
+                    ),
+                ]
+            ),
+        ],
+        id="modal",
+        size="lg",
+        is_open=False,
+    )
 
 
 from flask import Flask
 
 server = Flask(__name__)
 app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
+
 app.layout = dbc.Container(
     [
         html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
         dbc.Button(
-            "Open collapse",
-            id="collapse-button",
+            "Open Settings",
+            id="open-settings-button",
             className="mb-3",
             color="primary",
             n_clicks=0,
         ),
-        dbc.Collapse(
-            dbc.Card(
-                dbc.CardBody(generate_input_form(default_start_date, default_end_date))
-            ),
-            id="collapse",
-            class_name="pb-1",
+        dbc.Spinner(
+            children=generate_input_form(default_start_date, default_end_date),
+            type="border",
+            color="primary",
+            fullscreen=True,
+            delay_hide=200,
+            spinner_style={"width": "10rem", "height": "10rem"},
         ),
-        dbc.Tabs(generate_tabs(global_transaction_visualizer), id="tabs"),
+        dbc.Tabs(generate_tabs(None), id="tabs"),
     ],
-    style={"width": "80vw", "min-width": "80vw"},
+    style={"width": "80vw", "minWidth": "80vw"},
 )
 
 
-def parse_uploaded_csv(contents, filename):
+def uploaded_csv_to_iostream(contents, filename):
+    if ".csv" not in filename:
+        return
+
     content_type, content_string = contents.split(",")
 
     decoded = base64.b64decode(content_string)
-    if "csv" in filename:
-        iostream = io.StringIO(decoded.decode("utf-8"))
-        csv_parser = AccountStatementCsvParser(
-            iostream,
-            config,
-        )
-
-        global_transaction_visualizer.clear_transactions()
-        global_transaction_visualizer.add_transactions(
-            csv_parser.to_dated_transactions()
-        )
-        global_transaction_visualizer.set_analysis_interval(
-            csv_parser._csv_data[DataColumns.DATE].min(),
-            csv_parser._csv_data[DataColumns.DATE].max() + relativedelta(days=1),
-        )
+    iostream = io.StringIO(decoded.decode("utf-8"))
+    return iostream
 
 
 @app.callback(
-    [Output("collapse", "is_open"), Output("collapse-button", "children")],
-    [Input("collapse-button", "n_clicks")],
-    [State("collapse", "is_open")],
+    Output("modal", "is_open"),
+    Input("open-settings-button", "n_clicks"),
+    State("modal", "is_open"),
 )
-def toggle_collapse(n, is_open):
-    if n:
-        return not is_open, "Hide Settings" if not is_open else "Show Settings"
-    return is_open, "Show Settings"
+def toggle_modal(n1, is_open):
+    if n1:
+        return not is_open
+    return is_open
 
 
 @app.callback(
@@ -465,69 +478,118 @@ def toggle_collapse(n, is_open):
         Output("tabs", "children"),
         Output("date-picker-range", "start_date"),
         Output("date-picker-range", "end_date"),
-        Output("error", "children"),
+        Output("status", "children"),
+        Output("status", "className"),
     ],
     State("date-picker-range", "start_date"),
     State("date-picker-range", "end_date"),
     Input("update-button", "n_clicks"),
     Input("upload-data", "contents"),
     State("upload-data", "filename"),
+    State("status", "className"),
 )
-def update_output(start_date, end_date, n_clicks, contents, filename):
+def update_output(start_date, end_date, n_clicks, contents, filenames, status_cls):
     ctx = dash.callback_context
 
     if not ctx.triggered:
         return dash.no_update
 
-    error_msg = dash.no_update
+    output_tabs = dash.no_update
+    datepicker_start_date = dash.no_update
+    datepicker_end_date = dash.no_update
+    status_text = ""
+    status_class = status_cls.replace("show", "hide")
+
+    def set_error(msg):
+        cls = status_class.replace("hide", "show")
+        cls = cls.replace("alert-success", "alert-danger")
+        return msg, cls
+
+    def set_success(msg):
+        cls = status_class.replace("hide", "show")
+        cls = cls.replace("alert-danger", "alert-success")
+        return msg, cls
+
+    if isinstance(filenames, str):
+        filenames = [filenames]
+    if isinstance(contents, str):
+        contents = [contents]
 
     # File uploaded?
     if ctx.triggered[0]["prop_id"] == "upload-data.contents":
-        if not filename.endswith(".csv"):
-            error_msg = "Invalid file type selected. Only CSV is supported!"
-        else:
-            parse_uploaded_csv(contents, filename)
-            if global_transaction_visualizer.dataset_is_valid():
-                start_date = (
-                    global_transaction_visualizer.get_first_transaction_date_in_analysis_interval()
+        invalid_filename = False
+        for filename in filenames:
+            if not filename.endswith(".csv"):
+                status_text, status_class = set_error(
+                    "Invalid file type selected. Only CSV is supported!"
                 )
-                end_date = (
-                    global_transaction_visualizer.get_last_transaction_date_in_analysis_interval()
-                )
+                invalid_filename = True
+                break
 
-                end_date = end_date.strftime("%Y-%m-%d")
-                start_date = start_date.strftime("%Y-%m-%d")
-                return (
-                    dash.no_update,
-                    start_date,
-                    end_date,
-                    "File Uploaded, adjust the date range and click on update!",
+        if not invalid_filename:
+            dfs = []
+            for filename, content in zip(filenames, contents):
+                parser = AccountStatementCsvParser(
+                    uploaded_csv_to_iostream(content, filename),
+                    config,
                 )
-            else:
-                error_msg = "Internal error!"
+                dfs.append(parser.get_csv_dataframe())
+
+            df = pd.concat(dfs)
+            datepicker_start_date = df[DataColumns.DATE].min().strftime("%Y-%m-%d")
+            datepicker_end_date = df[DataColumns.DATE].max().strftime("%Y-%m-%d")
+
+            status_text, status_class = set_success(
+                f"{len(filenames)} file(s) selected for analysis. Pick a time range and click on update!"
+            )
 
     elif ctx.triggered[0]["prop_id"] == "update-button.n_clicks":
-        if start_date is not None and end_date is not None and start_date < end_date:
-            if global_transaction_visualizer.dataset_is_valid():
-                global_transaction_visualizer.set_analysis_interval(
-                    datetime.strptime(start_date, "%Y-%m-%d").date(),
-                    datetime.strptime(end_date, "%Y-%m-%d").date()
-                    + relativedelta(days=1),
-                )
-                return (
-                    generate_tabs(global_transaction_visualizer),
-                    dash.no_update,
-                    dash.no_update,
-                    "Data updated!",
-                )
-            else:
-                error_msg = "Internal error!"
+        if start_date is None or end_date is None or start_date >= end_date:
+            status_text, status_class = set_error("Date Range not valid!")
+        elif filenames is None:
+            status_text, status_class = set_error("No files have been selected!")
         else:
-            error_msg = "Date Range not valid!"
-    else:
-        error_msg = "Invalid trigger!"
+            dfs = []
+            for filename, content in zip(filenames, contents):
+                iostream = uploaded_csv_to_iostream(content, filename)
 
-    return dash.no_update, dash.no_update, dash.no_update, error_msg
+                csv_df = AccountStatementCsvParser(
+                    iostream,
+                    config,
+                ).get_csv_dataframe()
+
+                dfs.append(csv_df)
+
+            csv_parser = AccountStatementCsvParser(
+                pd.concat(dfs),
+                config,
+            )
+            status_text, status_class = set_success(
+                f"{len(filenames)} file(s) uploaded succesfully. Pick a time range and click on update!"
+            )
+
+            transaction_visualizer = TransactionVisualizer(config)
+            transaction_visualizer.set_transactions(csv_parser.to_dated_transactions())
+
+            transaction_visualizer.set_analysis_interval(
+                datetime.strptime(start_date, "%Y-%m-%d").date(),
+                datetime.strptime(end_date, "%Y-%m-%d").date() + relativedelta(days=1),
+            )
+            if transaction_visualizer.dataset_is_valid():
+                output_tabs = generate_tabs(transaction_visualizer)
+                status_text, status_class = set_success("Data visualization updated!")
+            else:
+                status_text, status_class = set_error("Internal error!")
+    else:
+        status_text, status_class = set_error("Invalid trigger!")
+
+    return (
+        output_tabs,
+        datepicker_start_date,
+        datepicker_end_date,
+        status_text,
+        status_class,
+    )
 
 
 if __name__ == "__main__":

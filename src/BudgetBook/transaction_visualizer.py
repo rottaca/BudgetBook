@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 import numpy as np
-from dateutil import relativedelta
+from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -36,8 +36,42 @@ class TransactionVisualizer:
     def add_transactions(self, transactions: List[RegularTransaction]):
         self._scheduled_transactions.extend(transactions)
 
+    def set_transactions(self, transactions: List[RegularTransaction]):
+        self.clear_transactions()
+        self._scheduled_transactions.extend(transactions)
+
     def get_transactions(self):
         return self._scheduled_transactions
+
+    def set_analysis_interval_to_max_range(self):
+        def get_first_occurence(transation):
+            if isinstance(transation, RegularTransaction):
+                return transation.get_frequency().get_first_occurence()
+            elif isinstance(transation, DatedTransaction):
+                return transation.date
+
+        def get_last_occurence(transation):
+            if isinstance(transation, RegularTransaction):
+                return transation.get_frequency().get_last_occurence()
+            elif isinstance(transation, DatedTransaction):
+                return transation.date
+
+        min_date = min(
+            [
+                get_first_occurence(t)
+                for t in self._scheduled_transactions
+                if get_first_occurence(t) is not None
+            ]
+        )
+        max_date = max(
+            [
+                get_last_occurence(t)
+                for t in self._scheduled_transactions
+                if get_last_occurence(t) is not None
+            ]
+        )
+
+        self.set_analysis_interval(min_date, max_date + relativedelta(days=1))
 
     def set_analysis_interval(self, from_date, to_date):
         self._from_date = from_date
@@ -176,6 +210,7 @@ class TransactionVisualizer:
 
         fig.update_layout(
             barmode="relative",
+            margin=dict(l=20, r=20),
         )
 
         fig.update_xaxes(
@@ -264,6 +299,7 @@ class TransactionVisualizer:
             title="Balance Per Month",
             xaxis_title="[Date]",
             yaxis_title=f"Balance Relative to Dataset Start [{CURRENCY_SYMBOL}]",
+            margin=dict(l=20, r=20),
         )
 
         return fig
@@ -298,6 +334,7 @@ class TransactionVisualizer:
             title="Transfers Per Month",
             xaxis_title="[Date]",
             yaxis_title=f"Transfers Per Month [{CURRENCY_SYMBOL}]",
+            margin=dict(l=20, r=20),
         )
         return fig
 
@@ -350,11 +387,14 @@ class TransactionVisualizer:
                 ]
             )
         )
-        fig.update_layout(title="Payments per Category")
+        fig.update_layout(
+            title="Payments per Category",
+            margin=dict(l=20, r=20),
+        )
         return fig
 
     def _total_months_in_dataset(self):
-        total_time_delta = relativedelta.relativedelta(
+        total_time_delta = relativedelta(
             self._dataframe_cache.index.max().date(),
             self._dataframe_cache.index.min().date(),
         )
@@ -402,5 +442,6 @@ class TransactionVisualizer:
             xaxis_title="Categories",
             yaxis_title=f"Distribution per Month [{CURRENCY_SYMBOL}]",
             showlegend=True,
+            margin=dict(l=20, r=20),
         )
         return fig

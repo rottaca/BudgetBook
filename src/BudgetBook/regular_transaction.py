@@ -1,4 +1,5 @@
 import datetime
+
 from BudgetBook.config_parser import DataColumns
 from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.helper import CURRENCY_SYMBOL
@@ -27,6 +28,9 @@ class RegularTransaction:
 
     def __repr__(self) -> str:
         return str(self)
+
+    def get_frequency(self) -> RegularEvent:
+        return self._frequency
 
     def to_dict(self) -> dict:
         return {
