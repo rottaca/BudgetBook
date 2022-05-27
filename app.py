@@ -46,8 +46,8 @@ def year(year: int) -> date:
 
 # scheduled_transactions = builder.get_scheduled_transactions()
 
-default_start_date = date(year=2021, month=5, day=1)
-default_end_date = date(year=2022, month=5, day=1)
+default_start_date = date.today()
+default_end_date = date.today()
 
 config = ConfigParser("configuration.yaml")
 # csv_parser = AccountStatementCsvParser(
@@ -527,15 +527,7 @@ def update_output(start_date, end_date, n_clicks, contents, filenames, status_cl
                 break
 
         if not invalid_filename:
-            dfs = []
-            for filename, content in zip(filenames, contents):
-                parser = AccountStatementCsvParser(
-                    uploaded_csv_to_iostream(content, filename),
-                    config,
-                )
-                dfs.append(parser.get_csv_dataframe())
-
-            df = pd.concat(dfs)
+            df = parse_csv_files_to_dataframe(contents, filenames)
             datepicker_start_date = df[DataColumns.DATE].min().strftime("%Y-%m-%d")
             datepicker_end_date = df[DataColumns.DATE].max().strftime("%Y-%m-%d")
 
@@ -549,19 +541,9 @@ def update_output(start_date, end_date, n_clicks, contents, filenames, status_cl
         elif filenames is None:
             status_text, status_class = set_error("No files have been selected!")
         else:
-            dfs = []
-            for filename, content in zip(filenames, contents):
-                iostream = uploaded_csv_to_iostream(content, filename)
-
-                csv_df = AccountStatementCsvParser(
-                    iostream,
-                    config,
-                ).get_csv_dataframe()
-
-                dfs.append(csv_df)
-
+            df = parse_csv_files_to_dataframe(contents, filenames)
             csv_parser = AccountStatementCsvParser(
-                pd.concat(dfs),
+                df,
                 config,
             )
             status_text, status_class = set_success(
@@ -590,6 +572,18 @@ def update_output(start_date, end_date, n_clicks, contents, filenames, status_cl
         status_text,
         status_class,
     )
+
+def parse_csv_files_to_dataframe(contents, filenames):
+    dfs = []
+    for filename, content in zip(filenames, contents):
+        parser = AccountStatementCsvParser(
+                    uploaded_csv_to_iostream(content, filename),
+                    config,
+                )
+        dfs.append(parser.get_csv_dataframe())
+
+    df = pd.concat(dfs).drop_duplicates()
+    return df
 
 
 if __name__ == "__main__":
