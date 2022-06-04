@@ -3,9 +3,12 @@ import io
 import os.path
 import sys
 import plotly
+from plotly.subplots import make_subplots
+
 from datetime import date, datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+import argparse
 
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, no_update
@@ -30,22 +33,6 @@ from BudgetBook.regular_transaction_predictor import RegularTransactionPredictor
 def year(year: int) -> date:
     return date(year=year, month=1, day=1)
 
-
-# builder = ReocurringBankTransferBuilder()
-# builder.set_first_ocurrence(2022)
-# builder.set_last_ocurrence(2023)
-# for i in range(10):
-#     amount = (random.random() - 0.5) * 1000.0
-#     cat = (
-#         Category.SALERY#         if amount > 0
-#         else Category(random.randint(1, len(Category) - 1))
-#     )
-#     builder.set_category(cat)
-#     builder.set_interval(0, random.randint(1, 5), 0)
-#     builder.schedule_bank_transfer(f"dummy {i}", amount)
-
-# scheduled_transactions = builder.get_scheduled_transactions()
-
 default_start_date = date.today()
 default_end_date = date.today()
 
@@ -62,8 +49,17 @@ config = ConfigParser("configuration.yaml")
 #     default_start_date, default_end_date
 # )
 
+in_demo_mode = False
+
 
 def generate_tabs(manager: TransactionVisualizer):
+
+    if manager is None and in_demo_mode:
+        manager = TransactionVisualizer(config=config)
+        from example_data import scheduled_transactions
+        manager.add_transactions(scheduled_transactions)
+        manager.set_analysis_interval_to_max_range()
+
     if manager is not None:
         tab1_content = generate_overview_tab(manager)
         tab2_content = generate_transactions_per_category_tab(manager)
@@ -172,7 +168,7 @@ def generate_dataset_table_tab(manager: TransactionVisualizer):
 
 def generate_detailed_transactions_tab(manager: TransactionVisualizer):
 
-    fig = plotly.subplots.make_subplots(
+    fig = make_subplots(
         rows=3,
         cols=1,
         shared_xaxes=True,
@@ -427,28 +423,6 @@ from flask import Flask
 server = Flask(__name__)
 app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
 
-app.layout = dbc.Container(
-    [
-        html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
-        dbc.Button(
-            "Open Settings",
-            id="open-settings-button",
-            className="mb-3",
-            color="primary",
-            n_clicks=0,
-        ),
-        dbc.Spinner(
-            children=generate_input_form(default_start_date, default_end_date),
-            type="border",
-            color="primary",
-            fullscreen=True,
-            delay_hide=200,
-            spinner_style={"width": "10rem", "height": "10rem"},
-        ),
-        dbc.Tabs(generate_tabs(None), id="tabs"),
-    ],
-    style={"width": "80vw", "minWidth": "80vw"},
-)
 
 
 def uploaded_csv_to_iostream(contents, filename):
@@ -587,5 +561,35 @@ def parse_csv_files_to_dataframe(contents, filenames):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Budget Book Webserver.")
+    parser.add_argument("--demo", action="store_true", default=False)
+    parser.add_argument("--debug", action="store_true", default=False)
 
-    app.run_server(debug=True)
+    args = parser.parse_args()
+    if args.demo:
+        print("Running in demo mode!")
+        in_demo_mode = True
+
+    app.layout = dbc.Container(
+        [
+            html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
+            dbc.Button(
+                "Open Settings",
+                id="open-settings-button",
+                className="mb-3",
+                color="primary",
+                n_clicks=0,
+            ),
+            dbc.Spinner(
+                children=generate_input_form(default_start_date, default_end_date),
+                type="border",
+                color="primary",
+                fullscreen=True,
+                delay_hide=200,
+                spinner_style={"width": "10rem", "height": "10rem"},
+            ),
+            dbc.Tabs(generate_tabs(None), id="tabs"),
+        ],
+        style={"width": "80vw", "minWidth": "80vw"},
+    )
+    app.run_server(debug=args.debug)

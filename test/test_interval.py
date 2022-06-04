@@ -94,10 +94,10 @@ def test_Regular_payment_builder():
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
     builder.set_category(Category.UNKNOWN_PAYMENT)
-    builder.schedule_bank_transaction("MyPayment1", -100.0)
+    builder.build_regular_transaction("MyPayment1", -100.0)
     builder.set_interval(months=2)
     builder.set_category(Category.SALERY)
-    builder.schedule_bank_transaction("MySalery", 1000.0)
+    builder.build_regular_transaction("MySalery", 1000.0)
 
     scheduled_transactions = builder.get_scheduled_transactions()
 
@@ -114,10 +114,10 @@ def test_bank_transaction_visualizer():
     builder.set_last_ocurrence(2023)
     builder.set_interval_monthly()
     builder.set_category(Category.UNKNOWN_PAYMENT)
-    builder.schedule_bank_transaction("MyPayment1", -100.0)
+    builder.build_regular_transaction("MyPayment1", -100.0)
     builder.set_interval(months=2)
     builder.set_category(Category.SALERY)
-    builder.schedule_bank_transaction("MySalery", 1000.0)
+    builder.build_regular_transaction("MySalery", 1000.0)
 
     scheduled_transactions = builder.get_scheduled_transactions()
 
@@ -141,7 +141,7 @@ def test_random_data_plots():
         )
         builder.set_category(cat)
         builder.set_interval(0, random.randint(1, 5), 0)
-        builder.schedule_bank_transaction(f"dummy {i}", amount)
+        builder.build_regular_transaction(f"dummy {i}", amount)
 
     scheduled_transactions = builder.get_scheduled_transactions()
 

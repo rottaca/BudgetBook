@@ -1,11 +1,10 @@
 import copy
 import datetime
 from typing import List
-from BudgetBook.helper import Category
 from BudgetBook.transaction_interval import TransactionInterval
 from BudgetBook.regular_event import RegularEvent
 from BudgetBook.regular_transaction import RegularTransaction
-
+from BudgetBook.dated_transaction import DatedTransaction
 
 class RegularTransactionBuilder:
     def __init__(self) -> None:
@@ -16,9 +15,9 @@ class RegularTransactionBuilder:
     def get_scheduled_transactions(self) -> List[RegularTransaction]:
         return self._scheduled_transactions
 
-    def set_first_ocurrence(self, year: int) -> None:
+    def set_first_ocurrence(self, year: int, month:int = 1, day:int = 1) -> None:
         self._current_recurrence.set_first_occurence(
-            datetime.date(year=year, month=1, day=1)
+            datetime.date(year=year, month=month, day=day)
         )
 
     def set_last_ocurrence(self, year: int) -> None:
@@ -43,7 +42,7 @@ class RegularTransactionBuilder:
     def set_category(self, category: str) -> None:
         self._current_category = category
 
-    def schedule_bank_transaction(
+    def build_regular_transaction(
         self,
         payment_party: str,
         amount: float,
@@ -54,7 +53,24 @@ class RegularTransactionBuilder:
                 payment_party,
                 copy.copy(self._current_recurrence),
                 amount,
-                self._current_category,
                 desc,
+                self._current_category,
+            )
+        )
+
+    def build_dated_transaction(
+        self,
+        payment_party: str,
+        amount: float,
+        date_of_transaction: datetime.date,
+        desc: str = "",
+    ):
+        self._scheduled_transactions.append(
+            DatedTransaction(
+                payment_party,
+                date_of_transaction,
+                amount,
+                desc,
+                self._current_category,
             )
         )

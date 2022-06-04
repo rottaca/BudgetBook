@@ -11,7 +11,7 @@ statement_parser:
     internal_transfer_categories: ["Savings"]
 
 category_mapping:
-    Salery:
+    Salary:
         description: ["lohn", "gehalt"]
     Insurance:
         payment_party: ["versicherung", "assuranc"]

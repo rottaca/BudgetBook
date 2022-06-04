@@ -17,7 +17,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/app.py",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
+            "args": ["--demo", "--debug"]
         }
     ]
 }
