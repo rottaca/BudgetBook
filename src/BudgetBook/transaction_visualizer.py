@@ -131,10 +131,7 @@ class TransactionVisualizer:
         self._dataframe_cache.index = pd.DatetimeIndex(self._dataframe_cache.index)
         self._dataframe_cache.sort_index(inplace=True)
 
-        self._dataframe_cache["date_without_day"] = [
-            datetime.date(year=d.year, month=d.month, day=1)
-            for d in self._dataframe_cache.index
-        ]
+        self._dataframe_cache["date_without_day"] = self._get_dates_without_day(self._dataframe_cache.index)
 
     def plot_statement_dataframe(self):
 
@@ -163,11 +160,8 @@ class TransactionVisualizer:
         if fig is None:
             fig = go.Figure()
 
-        sum_per_month = amount.groupby(by=pd.Grouper(freq="M")).sum()
-        dates = [
-            datetime.date(year=d.year, month=d.month, day=1)
-            for d in sum_per_month.index
-        ]
+        sum_per_month = self._get_sum_per_month(amount)
+        dates = self._get_dates_without_day(sum_per_month.index)
         fig.add_trace(
             go.Scatter(
                 x=dates,
@@ -224,6 +218,15 @@ class TransactionVisualizer:
             col=col,
         )
         return fig
+
+    def _get_dates_without_day(self, dates):
+        return [
+            datetime.date(year=d.year, month=d.month, day=1)
+            for d in dates
+        ]
+
+    def _get_sum_per_month(self, amount):
+        amount.groupby(by=pd.Grouper(freq="M")).sum()
 
     def plot_payments_per_month(self, fig=None, row=None, col=None):
         if not self.dataset_is_valid():
@@ -366,7 +369,7 @@ class TransactionVisualizer:
         amount_per_category = self._get_abs_payment_amount_per_category()
         total_months = self._total_months_in_dataset()
 
-        average_payment_per_month = [v / total_months for v in amount_per_category]
+        average_payment_per_month = self._get_avg_payment_per_month_and_category(amount_per_category, total_months)
 
         fig = go.Figure()
         fig.add_trace(
@@ -392,6 +395,9 @@ class TransactionVisualizer:
             margin=dict(l=20, r=20),
         )
         return fig
+
+    def _get_avg_payment_per_month_and_category(self, amount_per_category, total_months):
+        return [v / total_months for v in amount_per_category]
 
     def _total_months_in_dataset(self):
         total_time_delta = relativedelta(

@@ -37,18 +37,6 @@ default_start_date = date.today()
 default_end_date = date.today()
 
 config = ConfigParser("configuration.yaml")
-# csv_parser = AccountStatementCsvParser(
-#     r"C:\Users\Andreas Rottach\Google Drive\Umsaetze_2022.05.01.csv",
-#     config,
-# )
-# scheduled_transactions = csv_parser.to_dated_transactions()
-
-# global_transaction_visualizer = TransactionVisualizer(config)
-# global_transaction_visualizer.add_transactions(scheduled_transactions)
-# global_transaction_visualizer.set_analysis_interval(
-#     default_start_date, default_end_date
-# )
-
 in_demo_mode = False
 
 

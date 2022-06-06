@@ -64,6 +64,6 @@ class RegularEvent:
                 if current >= from_date:
                     yield current
 
-                current = current + self._interval_size.to_relative_delta()
+                current = current + self._interval_size
 
         return None
