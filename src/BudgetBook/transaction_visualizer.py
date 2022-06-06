@@ -226,7 +226,7 @@ class TransactionVisualizer:
         ]
 
     def _get_sum_per_month(self, amount):
-        amount.groupby(by=pd.Grouper(freq="M")).sum()
+        return amount.groupby(by=pd.Grouper(freq="M")).sum()
 
     def plot_payments_per_month(self, fig=None, row=None, col=None):
         if not self.dataset_is_valid():
