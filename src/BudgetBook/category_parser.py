@@ -1,8 +1,8 @@
-from BudgetBook.config_parser import DataColumns, ConfigKeywords, ConfigParser
+from BudgetBook.config_parser import DataColumns, ConfigKeywords, Config
 
 
 class CategoryParser:
-    def __init__(self, config: ConfigParser) -> None:
+    def __init__(self, config: Config) -> None:
         self._config = config
         self._category_mapping = config.get_category_mapping()
         self._csv_columns_mapping = config.get_csv_columns_mapping()

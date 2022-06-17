@@ -37,18 +37,27 @@ DATA_COLUMN_TO_DISPLAY_NAME = {
 }
 
 
-class ConfigParser:
-    def __init__(self, yaml_file_path: str) -> None:
-        with open(yaml_file_path, "r") as stream:
-            self._config = yaml.safe_load(stream)
+class Config:
+    __shared_state = None
 
-        self._category_mapping = self._config[ConfigKeywords.CATGORY_MAPPING_TOPLEVEL]
-        self._statement_parser = self._config[
-            ConfigKeywords.CSV_STATEMENT_PARSER_TOPLEVEL
-        ]
-        self._csv_statement_columns = self._statement_parser[
-            ConfigKeywords.CSV_COLUMNS_TOPLEVEL
-        ]
+    def __init__(self, yaml_file_path: str=None) -> None:
+        if yaml_file_path is not None:
+            with open(yaml_file_path, "r") as stream:
+                self._config = yaml.safe_load(stream)
+
+            self._category_mapping = self._config[ConfigKeywords.CATGORY_MAPPING_TOPLEVEL]
+            self._statement_parser = self._config[
+                ConfigKeywords.CSV_STATEMENT_PARSER_TOPLEVEL
+            ]
+            self._csv_statement_columns = self._statement_parser[
+                ConfigKeywords.CSV_COLUMNS_TOPLEVEL
+            ]
+            Config.__shared_state = self.__dict__
+        elif Config.__shared_state is not None:
+            self.__dict__ = Config.__shared_state 
+        else:
+            raise AttributeError("No config created yet!")
+
 
     def get_internal_transaction_categories(self) -> list:
         return self._statement_parser[ConfigKeywords.CATEGORIES_TO_IGNORE]

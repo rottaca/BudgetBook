@@ -51,6 +51,6 @@ category_mapping:
     Dept:
         payment_party: ["florian rottach"]
     Shared Account:
-        description: ["IBAN: DE601203000010813"]
+        description: ["IBAN: DE6012030000"]
     Savings:
         payment_party: ["andreas rottach"]

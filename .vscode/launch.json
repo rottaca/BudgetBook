@@ -15,10 +15,10 @@
             "name": "Python: Dash App",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/app.py",
+            "program": "${workspaceFolder}/budget_book.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--demo", "--debug"]
+            "args": ["--generate-predictions", "configuration.yaml"]
         }
     ]
 }

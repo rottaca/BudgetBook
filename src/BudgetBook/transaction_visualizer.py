@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.regular_transaction import RegularTransaction
 from BudgetBook.config_parser import (
-    ConfigParser,
+    Config,
     DataColumns,
     DATA_COLUMN_TO_DISPLAY_NAME,
 )
@@ -17,7 +17,7 @@ from BudgetBook.helper import COLORMAP, CURRENCY_SYMBOL
 
 
 class TransactionVisualizer:
-    def __init__(self, config: ConfigParser) -> None:
+    def __init__(self, config: Config) -> None:
         self._scheduled_transactions: List[RegularTransaction] = []
         self._from_date = None
         self._to_date = None

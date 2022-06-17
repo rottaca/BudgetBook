@@ -6,7 +6,7 @@ from sklearn.cluster import dbscan
 from sklearn.neighbors import LocalOutlierFactor
 from BudgetBook.category_parser import CategoryParser
 
-from BudgetBook.config_parser import ConfigParser, DataColumns
+from BudgetBook.config_parser import Config, DataColumns
 from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.regular_event import RegularEvent
 from BudgetBook.regular_transaction import RegularTransaction
@@ -14,7 +14,7 @@ from BudgetBook.transaction_interval import TransactionInterval
 
 
 class RegularTransactionPredictor:
-    def __init__(self, config: ConfigParser) -> None:
+    def __init__(self, config: Config) -> None:
         self._config = config
         self._category_parser = CategoryParser(self._config)
 

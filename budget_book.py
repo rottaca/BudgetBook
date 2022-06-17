@@ -24,7 +24,7 @@ from BudgetBook.account_statement_parser import AccountStatementCsvParser
 from BudgetBook.transaction_visualizer import TransactionVisualizer
 from BudgetBook.config_parser import (
     DATA_COLUMN_TO_DISPLAY_NAME,
-    ConfigParser,
+    Config,
     DataColumns,
 )
 from BudgetBook.regular_transaction_predictor import RegularTransactionPredictor
@@ -36,38 +36,35 @@ def year(year: int) -> date:
 default_start_date = date.today()
 default_end_date = date.today()
 
-config = ConfigParser("configuration.yaml")
-in_demo_mode = False
+enable_predictions = False
 
-
-def generate_tabs(manager: TransactionVisualizer):
-
-    if manager is None and in_demo_mode:
-        manager = TransactionVisualizer(config=config)
-        from example_data import scheduled_transactions
-        manager.add_transactions(scheduled_transactions)
-        manager.set_analysis_interval_to_max_range()
-
+def generate_tabs(manager: TransactionVisualizer, with_predictions_tab):
     if manager is not None:
         tab1_content = generate_overview_tab(manager)
         tab2_content = generate_transactions_per_category_tab(manager)
         tab3_content = generate_detailed_transactions_tab(manager)
         tab4_content = generate_dataset_table_tab(manager)
-        tab5_content = generate_prediction_tab(manager)
+        if with_predictions_tab:
+            tab5_content = generate_prediction_tab(manager)
     else:
         tab1_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
         tab2_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
         tab3_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
         tab4_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
-        tab5_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
+        if with_predictions_tab:
+            tab5_content = dbc.Card(dbc.CardBody("Load an account statement (*.csv)"))
 
-    return [
+    tabs= [
         dbc.Tab(tab1_content, label="Overview"),
         dbc.Tab(tab2_content, label="Transfers"),
         dbc.Tab(tab3_content, label="Individual Transfers"),
         dbc.Tab(tab4_content, label="Dataset"),
-        dbc.Tab(tab5_content, label="Predictions"),
     ]
+    if with_predictions_tab:
+        tabs.append(dbc.Tab(tab5_content, label="Predictions"))
+
+    return tabs
+
 
 
 def hex_to_rgb(value):
@@ -244,7 +241,7 @@ def generate_overview_tab(manager: TransactionVisualizer):
 
 
 def generate_prediction_tab(manager: TransactionVisualizer):
-    predictor = RegularTransactionPredictor(config)
+    predictor = RegularTransactionPredictor(Config())
     regular_transactions = predictor.to_regular_transactions(manager.get_transactions())
     df = pd.DataFrame.from_records([t.to_dict() for t in regular_transactions])
 
@@ -409,9 +406,7 @@ def generate_input_form(default_start_date, default_end_date):
 from flask import Flask
 
 server = Flask(__name__)
-app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
-
-
+budget_book = Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
 
 def uploaded_csv_to_iostream(contents, filename):
     if ".csv" not in filename:
@@ -424,7 +419,7 @@ def uploaded_csv_to_iostream(contents, filename):
     return iostream
 
 
-@app.callback(
+@budget_book.callback(
     Output("modal", "is_open"),
     Input("open-settings-button", "n_clicks"),
     State("modal", "is_open"),
@@ -435,7 +430,7 @@ def toggle_modal(n1, is_open):
     return is_open
 
 
-@app.callback(
+@budget_book.callback(
     [
         Output("tabs", "children"),
         Output("date-picker-range", "start_date"),
@@ -506,13 +501,13 @@ def update_output(start_date, end_date, n_clicks, contents, filenames, status_cl
             df = parse_csv_files_to_dataframe(contents, filenames)
             csv_parser = AccountStatementCsvParser(
                 df,
-                config,
+                Config(),
             )
             status_text, status_class = set_success(
                 f"{len(filenames)} file(s) uploaded succesfully. Pick a time range and click on update!"
             )
 
-            transaction_visualizer = TransactionVisualizer(config)
+            transaction_visualizer = TransactionVisualizer(Config())
             transaction_visualizer.set_transactions(csv_parser.to_dated_transactions())
 
             transaction_visualizer.set_analysis_interval(
@@ -520,7 +515,7 @@ def update_output(start_date, end_date, n_clicks, contents, filenames, status_cl
                 datetime.strptime(end_date, "%Y-%m-%d").date() + relativedelta(days=1),
             )
             if transaction_visualizer.dataset_is_valid():
-                output_tabs = generate_tabs(transaction_visualizer)
+                output_tabs = generate_tabs(transaction_visualizer, with_predictions_tab=enable_predictions)
                 status_text, status_class = set_success("Data visualization updated!")
             else:
                 status_text, status_class = set_error("Internal error!")
@@ -540,7 +535,7 @@ def parse_csv_files_to_dataframe(contents, filenames):
     for filename, content in zip(filenames, contents):
         parser = AccountStatementCsvParser(
                     uploaded_csv_to_iostream(content, filename),
-                    config,
+                    Config(),
                 )
         dfs.append(parser.get_csv_dataframe())
 
@@ -550,34 +545,59 @@ def parse_csv_files_to_dataframe(contents, filenames):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Budget Book Webserver.")
-    parser.add_argument("--demo", action="store_true", default=False)
-    parser.add_argument("--debug", action="store_true", default=False)
+    parser.add_argument("--from-module", type=str, default=None, help="Start server in demo mode with dummy-data.")
+    parser.add_argument("--debug", action="store_true", default=False, help="Start webserver in debug mode.")
+    parser.add_argument("--generate-predictions", action="store_true", default=False, help="Enable experimental predictions.")
+    parser.add_argument("config", type=str, help="Path to configuration yaml file!")
 
     args = parser.parse_args()
-    if args.demo:
-        print("Running in demo mode!")
-        in_demo_mode = True
 
-    app.layout = dbc.Container(
-        [
-            html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
-            dbc.Button(
-                "Open Settings",
-                id="open-settings-button",
-                className="mb-3",
-                color="primary",
-                n_clicks=0,
-            ),
-            dbc.Spinner(
-                children=generate_input_form(default_start_date, default_end_date),
-                type="border",
-                color="primary",
-                fullscreen=True,
-                delay_hide=200,
-                spinner_style={"width": "10rem", "height": "10rem"},
-            ),
-            dbc.Tabs(generate_tabs(None), id="tabs"),
-        ],
-        style={"width": "80vw", "minWidth": "80vw"},
-    )
-    app.run_server(debug=args.debug)
+    if args.generate_predictions:
+        enable_predictions = True
+
+    # Instantiate shared config once with path to config file
+    Config(args.config)
+
+    if args.from_module: 
+        manager = TransactionVisualizer(config=Config())
+
+        import importlib
+        try:
+            imported_module = importlib.import_module(args.from_module)
+            manager.add_transactions(imported_module.build_dataset())
+        except :
+            raise ModuleNotFoundError(f"Provided module {args.from_module} can not be imported!")
+
+        manager.set_analysis_interval_to_max_range()
+
+        budget_book.layout = dbc.Container(
+            [
+                html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
+                dbc.Tabs(generate_tabs(manager, with_predictions_tab=False), id="tabs"),
+            ],
+            style={"width": "80vw", "minWidth": "80vw"},
+        )
+    else:
+        budget_book.layout = dbc.Container(
+            [
+                html.H1("Budget Book Dashboard", style={"textAlign": "center"}),
+                dbc.Button(
+                    "Open Settings",
+                    id="open-settings-button",
+                    className="mb-3",
+                    color="primary",
+                    n_clicks=0,
+                ),
+                dbc.Spinner(
+                    children=generate_input_form(default_start_date, default_end_date),
+                    type="border",
+                    color="primary",
+                    fullscreen=True,
+                    delay_hide=200,
+                    spinner_style={"width": "10rem", "height": "10rem"},
+                ),
+                dbc.Tabs(generate_tabs(None, with_predictions_tab=False), id="tabs"),
+            ],
+            style={"width": "80vw", "minWidth": "80vw"},
+        )
+    budget_book.run_server(debug=args.debug)
