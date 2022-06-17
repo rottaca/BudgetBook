@@ -32,7 +32,7 @@
 ![](doc/img/example_data_tab2.png)
 ### Detailed Visualization
 ![](doc/img/example_data_tab3_1.png)
-![](doc/img/example_data_tab3_2.png.png)
+![](doc/img/example_data_tab3_2.png)
 ### Dataset Table (searchable, filterable, sortable)
 ![](doc/img/example_data_tab4.png)
 
