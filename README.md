@@ -7,7 +7,7 @@
 - Can categorize your spendings and earnings based on custom filteres.
  - Filters can be tuned to classify all your spendings correctly!
  - Internal transactions to your own accounts can be filtered out!
- - If you prefer to manually write down regular spendings, you can do that too! Have a look at the second below!
+ - If you prefer to manually write down regular spendings, you can do that too! Have a look at the sections below!
 
 ### Visualization
  - Pie chart with spendings per category
