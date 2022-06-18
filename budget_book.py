@@ -196,6 +196,11 @@ def generate_transactions_per_category_tab(manager: TransactionVisualizer):
                     figure=manager.plot_transactions_per_month(),
                     style={"height": "80vh"},
                 ),
+                dcc.Graph(
+                    id="transactions_per_month_area",
+                    figure=manager.plot_payments_per_month_as_area(),
+                    style={"height": "80vh"},
+                ),
             ]
         ),
         className="mt-3",

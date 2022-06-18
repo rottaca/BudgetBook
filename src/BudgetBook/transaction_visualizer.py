@@ -5,11 +5,13 @@ from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 import plotly.graph_objects as go
+from BudgetBook.category_parser import CategoryParser
 
 from BudgetBook.dated_transaction import DatedTransaction
 from BudgetBook.regular_transaction import RegularTransaction
 from BudgetBook.config_parser import (
     Config,
+    ConfigKeywords,
     DataColumns,
     DATA_COLUMN_TO_DISPLAY_NAME,
 )
@@ -79,11 +81,19 @@ class TransactionVisualizer:
         self._to_dataframe()
 
         if self.dataset_is_valid():
+
+            categories_from_config = set(self._config.get_category_mapping().keys())
+            categories_from_dataset = set(self._dataframe_cache[DataColumns.CATEGORY].unique())
+
+            categories = categories_from_config.union(categories_from_dataset)
+            categories.add(ConfigKeywords.CATEGORY_DEFAULT_UNKNOWN_INCOME)
+            categories.add(ConfigKeywords.CATEGORY_DEFAULT_UNKNOWN_PAYMENT)
+
+            categories = sorted(categories)
+
             self.category_to_color_map = {
-                c: COLORMAP[idx]
-                for idx, c in enumerate(
-                    self._dataframe_cache[DataColumns.CATEGORY].unique()
-                )
+                c: COLORMAP[idx % len(COLORMAP)]
+                for idx, c in enumerate(categories)
             }
 
     def dataset_is_valid(self):
@@ -341,6 +351,48 @@ class TransactionVisualizer:
         )
         return fig
 
+    def plot_payments_per_month_as_area(self):
+
+        if not self.dataset_is_valid():
+            return go.Figure()
+
+        
+        df = self._get_data_without_internal_transactions()
+
+        df = df[df[DataColumns.AMOUNT] < 0]
+        
+        df = (
+            df.groupby(["date_without_day", DataColumns.CATEGORY])
+            .sum()
+            .reset_index()
+        )
+
+
+        fig = go.Figure()
+
+        for category in df[DataColumns.CATEGORY].unique():
+            mask = df[DataColumns.CATEGORY] == category
+            curr_df = df[mask]
+            fig.add_trace(
+                go.Scatter(
+                    name=category,
+                    x=curr_df["date_without_day"],
+                    y=curr_df[DataColumns.AMOUNT].abs(),
+                    mode="lines",
+                    stackgroup="categories",
+                    marker_color=self.category_to_color_map[category],
+                    hovertemplate=f"%{{y:.2f}} {CURRENCY_SYMBOL}",
+                ),
+            )
+        fig.update_layout(
+            title="Payments Per Month",
+            xaxis_title="[Date]",
+            yaxis_title=f"Payments Per Month [{CURRENCY_SYMBOL}]",
+            margin=dict(l=20, r=20),
+            hovermode="x unified"
+        )
+        return fig
+
     def _get_data_without_internal_transactions(self):
         internal_transaction_categories = (
             self._config.get_internal_transaction_categories()
@@ -392,7 +444,7 @@ class TransactionVisualizer:
         )
         fig.update_layout(
             title="Payments per Category",
-            margin=dict(l=20, r=20),
+            margin=dict(l=0, r=0),
         )
         return fig
 

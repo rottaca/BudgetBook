@@ -12,7 +12,7 @@ class RegularTransactionBuilder:
         self._scheduled_transactions = []
         self._current_category = None
 
-    def get_scheduled_transactions(self) -> List[RegularTransaction]:
+    def transactions_to_dataframe(self) -> List[RegularTransaction]:
         return self._scheduled_transactions
 
     def set_first_ocurrence(self, year: int, month:int = 1, day:int = 1) -> None:

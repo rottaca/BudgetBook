@@ -28,8 +28,9 @@
 # Screenshots
 ### Overview
 ![](doc/img/example_data_tab1.png)
-### Transfer Overview per Month and Category
+### Overview per Month and Category
 ![](doc/img/example_data_tab2.png)
+![](doc/img/example_data_tab2_2.png)
 ### Detailed Visualization
 ![](doc/img/example_data_tab3_1.png)
 ![](doc/img/example_data_tab3_2.png)
@@ -92,9 +93,13 @@ Click on "update" to regenerate the visualization. Depending on the size of your
 ![](doc/img/example_data_tab1.png)
 
 ## How to define regular transactions manually as code
-Define a python file and provide the transactions there.
-Take a look at `example_data.py` for more details. 
-Here is an example:
+Sometimes it's better to manually write down your regular expenses by hand.
+That allows you to get rid of irregular expenses and gives you a clearer
+picture on your regular expenses. 
+
+This can be done by defining the expenses (and earnings) in a python file.
+Below you find a short introduction. Take a look at `example_data.py` for more details. 
+
 ```python
 # The function needs to be called exactly like this!
 def build_dataset():
@@ -128,14 +133,14 @@ def build_dataset():
     builder.build_regular_transaction("My Other Insurance", -150.0, "Insurance for XY")
 
     # Generate final dataset
-    return builder.get_scheduled_transactions()
+    return builder.transactions_to_dataframe()
 ```
 
-The defined dataset can then be visualized by passing it to the webserver:
+The dataset can then be visualized by passing it to the webserver:
 
 ```bash
 source ./venv/Scripts/activate
-python budget_book.py --from-module example_data.py configuration.yaml
+python budget_book.py --from-module example_data example_data_config.yaml
 ```
 
 Note: The dataset needs to be in a loadable module. Try to keep it inside the budget book repository.

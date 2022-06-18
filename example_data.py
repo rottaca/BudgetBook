@@ -54,4 +54,4 @@ def build_dataset():
         for month in range(1, 13):
             builder.build_dated_transaction("Shopping at XY", -random.random() * 100, date(2022, month, random.randint(1, 28)))
 
-    return builder.get_scheduled_transactions()
+    return builder.transactions_to_dataframe()

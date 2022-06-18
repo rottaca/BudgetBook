@@ -10,6 +10,8 @@ class ConfigKeywords:
     CATEGORY_RULE_AND = "and"
     CATEGORY_RULE_OR = "or"
 
+    CATEGORY_DEFAULT_UNKNOWN_INCOME = "Unknown Income"
+    CATEGORY_DEFAULT_UNKNOWN_PAYMENT  = "Unknown Payment"
     CSV_STATEMENT_PARSER_TOPLEVEL = "statement_parser"
     CSV_COLUMNS_TOPLEVEL = "csv_columns"
 

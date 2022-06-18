@@ -12,7 +12,16 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Dash App",
+            "name": "Python: Budget Book from Module",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/budget_book.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--generate-predictions", "--from-module", "example_data", "example_data_config.yaml"]
+        }
+        {
+            "name": "Python: Budget Book from CSV",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/budget_book.py",

@@ -1,0 +1,59 @@
+statement_parser:
+    csv_columns:
+        payment_party: "Name Zahlungsbeteiligter"
+        amount: "Betrag"
+        type_of_transfer: "Buchungstext"
+        description: "Verwendungszweck"
+        date: "Buchungstag"
+
+    date_format: "%d.%m.%Y"
+
+    internal_transfer_categories: ["Savings"]
+
+category_mapping:
+    Salary:
+        description: ["lohn", "gehalt"]
+    Insurance:
+        payment_party: ["versicherung", "assuranc"]
+    Mobility:
+        or:
+            description: ["tankstelle",  "tanken", "parkhaus", "parkplatz", "garage", "autohaus", "autocenter", "waschanlage"]
+            payment_party:
+                ["tank", "bundeskasse in weiden", "vergoelst", "shell", "aral", "pneuhage", "jet"]
+    Household:
+        or:
+            payment_party: ["swu"]
+            description: ["entsorgungsbetriebe"]
+    Internet and Mobile:
+        or:
+            description: ["spotify", "rundfunk"]
+            payment_party:
+                ["vodafone", "klarmobil", "congstar", "Rundfunk ARD, ZDF, DRadio"]
+    Groceries:
+        or:
+            description: ["takeaway.com", "lidl", "kfc", "ristorante", "burgerkind", "mcdonalds"]
+            payment_party:
+                [
+                    "lidl",
+                    "edeka",
+                    "rewe",
+                    "finkbeiner",
+                    "ecenter",
+                    "drogerie",
+                    "kaufland",
+                    "Netto Marken-Discoun"
+                ]
+    Rent:
+        description: ["miet"]
+    Appartment:
+        description: []
+    Online Shopping:
+        or:
+            description: ["paypal", "amazon"]
+            payment_party: ["paypal", "amazon"]
+    Dept:
+        payment_party: ["florian rottach"]
+    Shared Account:
+        description: ["IBAN: DE6012030000"]
+    Savings:
+        zpayment_party: ["andreas rottach"]
