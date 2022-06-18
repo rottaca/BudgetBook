@@ -25,6 +25,18 @@
 ## Experimental Features
 - Can extract reocurring/regular payments and earnings from your existing account statements, based on the payment party and the transaction description. This feature can be enabled by passing `--generated-predictions` as commandline argument! Only works for csv statement files!
 
+
+## Setup
+You need to install Python >= 3.6.
+
+Afterwards, just install the dependencies into a virtual environment like this (bash - might be slightly different for cmd/powershell):
+
+```bash
+python -m venv venv
+source .venv/Scripts/activate
+python -m pip install requirements.txt
+```
+
 # Screenshots
 ### Overview
 ![](doc/img/example_data_tab1.png)
